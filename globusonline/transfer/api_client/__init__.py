@@ -52,8 +52,8 @@ from globusonline.transfer.api_client.verified_https \
     import VerifiedHTTPSConnection
 from globusonline.transfer.api_client.get_go_cookie import get_go_auth
 
-VERSION = "v0.10"
-DEFAULT_BASE_URL = "https://transfer.api.globusonline.org/" + VERSION
+API_VERSION = "v0.10"
+DEFAULT_BASE_URL = "https://transfer.api.globusonline.org/" + API_VERSION
 RETRY_WAIT_SECONDS=30
 
 __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
@@ -61,7 +61,7 @@ __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
            "ServiceUnavailable"]
 
 # client version
-__version__ = "0.10.6"
+__version__ = "0.10.7"
 
 class TransferAPIClient(object):
     """

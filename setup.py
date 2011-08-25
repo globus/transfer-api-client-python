@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name="globusonline-transfer-api-client",
-      version="0.10.6",
+      version="0.10.7",
       description="Globus Online Transfer API client library",
       author="Bryce Allen",
       author_email="ballen@ci.uchicago.edu",
