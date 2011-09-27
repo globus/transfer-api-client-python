@@ -61,7 +61,7 @@ __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
            "ServiceUnavailable"]
 
 # client version
-__version__ = "0.10.7"
+__version__ = "0.10.8"
 
 class TransferAPIClient(object):
     """
@@ -533,9 +533,6 @@ class TransferAPIClient(object):
                                  scheme=scheme,
                                  port=port,
                                  subject=subject)]
-        elif hostname is not None:
-            raise InterfaceError("hostname not allowed when creating globus"
-                                 + " connect endpoints.")
 
         return self.post("/endpoint", json.dumps(data))
 
@@ -877,7 +874,12 @@ def api_result(response, data):
         raise InterfaceError("Unexpected status code in response: %d"
                              % status_code)
 
-def encode_qs(kwargs):
+def encode_qs(kwargs=None, **kw):
+    if kwargs is None:
+        kwargs = kw
+    else:
+        kwargs.update(kw)
+
     if kwargs:
         return "?" + urllib.urlencode(kwargs)
     else:

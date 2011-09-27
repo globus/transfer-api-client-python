@@ -1,11 +1,11 @@
 from distutils.core import setup
 
 setup(name="globusonline-transfer-api-client",
-      version="0.10.7",
+      version="0.10.8",
       description="Globus Online Transfer API client library",
       author="Bryce Allen",
       author_email="ballen@ci.uchicago.edu",
-      url="https://transfer.api.globusonline.org/",
+      url="https://github.com/globusonline/transfer-api-client-python",
       packages=["globusonline", "globusonline.transfer",
                 "globusonline.transfer.api_client"],
       keywords=["globusonline"],
