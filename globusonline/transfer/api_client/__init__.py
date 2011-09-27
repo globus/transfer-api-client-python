@@ -58,7 +58,7 @@ RETRY_WAIT_SECONDS=30
 
 __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
            "APIError", "ClientError", "ServerError", "ExternalError",
-           "ServiceUnavailable"]
+           "ServiceUnavailable", "Transfer"]
 
 # client version
 __version__ = "0.10.8"
