@@ -58,7 +58,7 @@ RETRY_WAIT_SECONDS=30
 
 __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
            "APIError", "ClientError", "ServerError", "ExternalError",
-           "ServiceUnavailable", "Transfer"]
+           "ServiceUnavailable", "Transfer", "Delete"]
 
 # client version
 __version__ = "0.10.8"
@@ -345,10 +345,14 @@ class TransferAPIClient(object):
         """
         return self._request_json("POST", path, body, "application/json")
 
-    def delete(self, path):
+    def _delete(self, path):
         """
         @return: (status_code, status_reason, data)
         @raise TransferAPIError
+
+        TODO: this conflicts with the method for submitting delete
+              jobs, so it's named inconsistently from the other HTTP method
+              functions. Maybe they should all be _ prefixed?
         """
         return self._request_json("DELETE", path)
 
@@ -519,6 +523,11 @@ class TransferAPIClient(object):
         return self.get(_endpoint_path(endpoint_name, "/ls")
                         + encode_qs(kw))
 
+    def endpoint_mkdir(self, endpoint_name, path, **kw):
+        data = dict(path=path, DATA_TYPE="mkdir")
+        return self.post(_endpoint_path(endpoint_name, "/mkdir")
+                         + encode_qs(kw), json.dumps(data))
+
     def endpoint_create(self, endpoint_name, hostname=None, description="",
                         scheme="gsiftp", port=2811, subject=None,
                         myproxy_server=None, public=False,
@@ -570,14 +579,17 @@ class TransferAPIClient(object):
         @return: (status_code, status_reason, data)
         @raise TransferAPIError
         """
-        return self.delete(_endpoint_path(endpoint_name))
+        return self._delete(_endpoint_path(endpoint_name))
 
-    def transfer_submission_id(self):
+    def submission_id(self):
         """
         @return: (status_code, status_reason, data)
         @raise: TransferAPIError
         """
-        return self.get("/transfer/submission_id")
+        return self.get("/submission_id")
+
+    # backward compatibility
+    transfer_submission_id = submission_id
 
     def transfer(self, transfer):
         """
@@ -586,6 +598,14 @@ class TransferAPIClient(object):
         @raise TransferAPIError
         """
         return self.post("/transfer", transfer.as_json())
+
+    def delete(self, delete):
+        """
+        @type delete: Delete object
+        @return: (status_code, status_reason, data)
+        @raise TransferAPIError
+        """
+        return self.post("/delete", delete.as_json())
 
 
 class Transfer(object):
@@ -596,19 +616,18 @@ class Transfer(object):
     they are set in the constructor.
     """
     def __init__(self, submission_id, source_endpoint, destination_endpoint,
-                 deadline=None, sync_level=None):
+                 deadline=None, sync_level=None, label=None):
         self.submission_id = submission_id
-        self.deadline = deadline
-        self.sync_level = sync_level
-        self.items = []
         self.source_endpoint = source_endpoint
         self.destination_endpoint = destination_endpoint
+        self.deadline = deadline
+        self.sync_level = sync_level
+        self.label = label
+        self.items = []
 
     def add_item(self, source_path, destination_path, recursive=False,
                  verify_size=None):
-        item = dict(source_endpoint=self.source_endpoint,
-                    source_path=source_path,
-                    destination_endpoint=self.destination_endpoint,
+        item = dict(source_path=source_path,
                     destination_path=destination_path,
                     recursive=recursive,
                     verify_size=verify_size,
@@ -623,8 +642,11 @@ class Transfer(object):
         return { "DATA_TYPE": "transfer",
                  "length": len(self.items),
                  "submission_id": self.submission_id,
+                 "source_endpoint": self.source_endpoint,
+                 "destination_endpoint": self.destination_endpoint,
                  "deadline": deadline,
                  "sync_level": self.sync_level,
+                 "label": self.label,
                  "DATA": self.items }
 
     def as_json(self):
@@ -632,6 +654,45 @@ class Transfer(object):
 
 # For backward compatibility; new code should just use Transfer.
 SimpleTransfer = Transfer
+
+
+class Delete(object):
+    """
+    Class for constructing a delete request, which contains an endpoint and a
+    collections of items containing the paths to delete on that endpoint. To
+    delete directories, the recursive option must be set.
+    """
+    def __init__(self, submission_id, endpoint, deadline=None, recursive=False,
+                 ignore_missing=True, label=None):
+        self.submission_id = submission_id
+        self.endpoint = endpoint
+        self.deadline = deadline
+        self.recursive = recursive
+        self.ignore_missing = ignore_missing
+        self.label = label
+        self.items = []
+
+    def add_item(self, path):
+        item = dict(path=path, DATA_TYPE="delete_item")
+        self.items.append(item)
+
+    def as_data(self):
+        if self.deadline is None:
+            deadline = None
+        else:
+            deadline = str(self.deadline)
+        return { "DATA_TYPE": "delete",
+                 "length": len(self.items),
+                 "submission_id": self.submission_id,
+                 "endpoint": self.endpoint,
+                 "deadline": deadline,
+                 "recursive": self.recursive,
+                 "ignore_missing": self.ignore_missing,
+                 "label": self.label,
+                 "DATA": self.items }
+
+    def as_json(self):
+        return json.dumps(self.as_data())
 
 
 class ActivationRequirementList(object):
