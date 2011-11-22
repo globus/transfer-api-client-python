@@ -378,6 +378,13 @@ class TransferAPIClient(object):
         """
         return self.get("/task/%s" % task_id + encode_qs(kw))
 
+    def task_update(self, task_id, task_data):
+        """
+        @return: (status_code, status_reason, data)
+        @raise TransferAPIError
+        """
+        return self.post("/task/%s" % task_id + encode_qs(kw))
+
     def task_cancel(self, task_id, **kw):
         """
         @return: (status_code, status_reason, data)
