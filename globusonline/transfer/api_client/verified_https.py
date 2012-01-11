@@ -20,9 +20,20 @@ See http://www.muchtooscrawled.com/2010/03/https-certificate-verification-in-pyt
 """
 import socket
 import ssl
-from httplib import HTTPSConnection
+import os
+from httplib import HTTPSConnection, urlsplit
 
 __all__ = ["VerifiedHTTPSConnection"]
+
+def get_proxy():
+    '''
+    Return (host,port) if environment variable HTTPS_PROXY or
+    https_proxy is found.  Otherwise return ().  Proxy variable value
+    is assumed to be in the form of a URL like http://host:port/
+    '''
+    proxy = os.environ.get('HTTPS_PROXY') or os.environ.get('https_proxy')
+    if not proxy: return ()
+    return urlsplit(proxy)[1].split(':')
 
 class VerifiedHTTPSConnection(HTTPSConnection):
     """
@@ -39,8 +50,18 @@ class VerifiedHTTPSConnection(HTTPSConnection):
                          CA certificates that are trusted for verifying
                          the certificate of the remote server.
         """
+        proxy = get_proxy()
+        if proxy:
+            real_host,real_port = host,port
+            host,port = proxy
+            pass
+
         HTTPSConnection.__init__(self, host, port, key_file, cert_file,
                                  strict, timeout)
+        if proxy:
+            self.set_tunnel(real_host,real_port)
+            pass
+
         self.ca_certs = ca_certs
 
     def connect(self):
@@ -57,6 +78,7 @@ class VerifiedHTTPSConnection(HTTPSConnection):
                                     self.cert_file,
                                     cert_reqs=ssl.CERT_REQUIRED,
                                     ca_certs=self.ca_certs)
+
 
 if __name__ == '__main__':
     import sys
