@@ -21,19 +21,24 @@ See http://www.muchtooscrawled.com/2010/03/https-certificate-verification-in-pyt
 import socket
 import ssl
 import os
-from httplib import HTTPSConnection, urlsplit
+from httplib import HTTPSConnection
+from urlparse import urlsplit
 
 __all__ = ["VerifiedHTTPSConnection"]
 
 def get_proxy():
-    '''
-    Return (host,port) if environment variable HTTPS_PROXY or
+    """
+    Return (host, port) if environment variable HTTPS_PROXY or
     https_proxy is found.  Otherwise return ().  Proxy variable value
-    is assumed to be in the form of a URL like http://host:port/
-    '''
-    proxy = os.environ.get('HTTPS_PROXY') or os.environ.get('https_proxy')
+    is assumed to be in the form of a URL like http://host[:port]/.
+    If port is not given it defaults to 443.
+    """
+    proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
     if not proxy: return ()
-    return urlsplit(proxy)[1].split(':')
+    proxy = urlsplit(proxy)[1].split(":")
+    if len(proxy) == 1:
+        return (proxy, 443)
+    return (proxy[0], int(proxy[1]))
 
 class VerifiedHTTPSConnection(HTTPSConnection):
     """
@@ -52,15 +57,16 @@ class VerifiedHTTPSConnection(HTTPSConnection):
         """
         proxy = get_proxy()
         if proxy:
-            real_host,real_port = host,port
-            host,port = proxy
-            pass
+            real_host, real_port = host, port
+            host, port = proxy
 
         HTTPSConnection.__init__(self, host, port, key_file, cert_file,
                                  strict, timeout)
         if proxy:
-            self.set_tunnel(real_host,real_port)
-            pass
+            if hasattr(self, "set_tunnel"):     # Python 2.7+
+                self.set_tunnel(real_host, real_port)
+            elif hasattr(self, "_set_tunnel"):  # Python 2.6.6 (private)
+                self._set_tunnel(real_host, real_port)
 
         self.ca_certs = ca_certs
 
