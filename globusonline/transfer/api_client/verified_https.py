@@ -24,7 +24,9 @@ import os
 from httplib import HTTPSConnection
 from urlparse import urlsplit
 
+
 __all__ = ["VerifiedHTTPSConnection"]
+
 
 def get_proxy():
     """
@@ -35,10 +37,11 @@ def get_proxy():
     """
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
     if not proxy: return ()
-    proxy = urlsplit(proxy)[1].split(":")
+    proxy = urlsplit(proxy).netloc.split(":")
     if len(proxy) == 1:
         return (proxy, 443)
     return (proxy[0], int(proxy[1]))
+
 
 class VerifiedHTTPSConnection(HTTPSConnection):
     """
