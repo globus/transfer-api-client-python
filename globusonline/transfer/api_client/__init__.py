@@ -61,7 +61,7 @@ __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
            "ServiceUnavailable", "Transfer", "Delete"]
 
 # client version
-__version__ = "0.10.8"
+__version__ = "0.10.9"
 
 class TransferAPIClient(object):
     """
@@ -1026,8 +1026,16 @@ def process_args(args=None, parser=None):
     elif options.saml_cookie:
         if options.key_file or options.cert_file:
             parser.error("use only one authentication method: -p, -k/-c, or -s")
-    elif not options.key_file or not options.cert_file:
-        parser.error("specify one authentication method: -p, -k/-c, or -s")
+    else:
+        # If only one of -k/-c is specified, assume both the key and cert are
+        # in the same file.
+        if not options.key_file:
+            if not options.cert_file:
+                parser.error(
+                    "specify one authentication method: -p, -k/-c, or -s")
+            options.key_file = options.cert_file
+        if not options.cert_file:
+            options.cert_file = options.key_file
 
     return options, args
 
@@ -1041,6 +1049,7 @@ def get_random_serial():
     http://www.win.tue.nl/hashclash/rogue-ca
     """
     return struct.unpack("<Q", os.urandom(8))[0]
+
 
 def create_proxy_from_file(issuer_cred_file, public_key, lifetime=3600):
     """
@@ -1056,6 +1065,7 @@ def create_proxy_from_file(issuer_cred_file, public_key, lifetime=3600):
     with open(issuer_cred_file) as f:
         issuer_cred = f.read()
     return create_proxy(issuer_cred, public_key, lifetime)
+
 
 _begin_private_key = "-----BEGIN RSA PRIVATE KEY-----"
 _end_private_key = "-----END RSA PRIVATE KEY-----"
@@ -1144,6 +1154,7 @@ def create_proxy(issuer_cred, public_key, lifetime=3600):
     sign_pkey.assign_rsa(issuer_rsa)
     proxy.sign(pkey=sign_pkey, md="sha1")
     return proxy.as_pem() + issuer_chain
+
 
 def create_client_from_args(args=None):
     """

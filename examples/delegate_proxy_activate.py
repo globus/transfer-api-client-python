@@ -14,7 +14,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Demonstrate how to use the delegate_proxy activation method.
+Demonstrate how to use the delegate_proxy activation method. Note that this
+method requires M2Crypto.
+
+In Fedora/RHEL/CentOS:
+
+ $ yum install m2crypto
+
+In Ubuntu/Debian:
+
+ $ apt-get install python-m2crypto
+
+It can also be installed with easy_install/pip etc, if the Python and openssl
+headers are available:
+
+ $ easy_install m2crypto
+
+
+Usage:
+
+ delegate_proxy_activate.py USERNAME 'ENDPOINT_NAME' /path/to/credential \
+    -k /path/to/auth/key -c /path/to/auth/cert -C ca/gd-bundle_ca.cert
+
+The credential passed as the third argument is what is used to activate the
+endpoint, and may be the same or different from the credential used to
+authenticate to the API (passed with -k/-c).
+
+The endpoint name may contain a # which is a shell comment, so be sure to
+quote the endpoint name.
 """
 
 import sys

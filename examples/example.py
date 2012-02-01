@@ -184,7 +184,10 @@ def _print_endpoint(ep):
     servers = ep.get("DATA", ())
     print "  servers:"
     for s in servers:
-        print "    " + s["uri"],
+        uri = s["uri"]
+        if not uri:
+            uri = "GC endpoint, no uri available"
+        print "    " + uri,
         if s["subject"]:
             print " (%s)" % s["subject"]
         else:

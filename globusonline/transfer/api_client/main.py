@@ -16,16 +16,25 @@
 """
 Script for using the client in an interactive interpreter, e.g.
 
- python -i -m globusonline.transfer.api_client.main USERNAME -p
+ python -i -m globusonline.transfer.api_client.main USERNAME -p \
+    -C ca/gd-bundle_ca.cert
 
 It creates a TransferAPIClient instance called "api" with the credentials
 passed on the command line, which you can use to make requests.
 
+ >>> import readline # This gives you command history.
  >>> print dir(api) # See a list of available methods.
  >>> code, reason, data = api.tasksummary() # Test out tasksummary.
+ >>> api.set_debug_print(True, True) # Print raw request/responses.
+ >>> code, reason, data = api.tasksummary() # Run again with debugging enabled.
+
 """
 
 import globusonline.transfer.api_client
 
 if __name__ == '__main__':
+    try:
+        import readline
+    except ImportError:
+        pass
     api, _ = globusonline.transfer.api_client.create_client_from_args()
