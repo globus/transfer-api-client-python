@@ -4,4 +4,4 @@ mkproxy: mkproxy.c
 .PHONY: clean
 
 clean:
-	rm mkproxy
+	-rm -f mkproxy
