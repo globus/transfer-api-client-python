@@ -1,3 +1,0 @@
-[ v3_proxy ]
-proxyCertInfo=critical,language:id-ppl-inheritAll
-keyUsage=digitalSignature,keyEncipherment,dataEncipherment
