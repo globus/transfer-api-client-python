@@ -56,12 +56,18 @@ API_VERSION = "v0.10"
 DEFAULT_BASE_URL = "https://transfer.api.globusonline.org/" + API_VERSION
 RETRY_WAIT_SECONDS=30
 
+HOST_CA_MAP = {
+    "transfer.api.globusonline.org": "ca/godaddy-ca.pem",
+    "transfer.qa.api.globusonline.org": "ca/godaddy-ca.pem",
+    "transfer.test.api.globusonline.org": "ca/globusconnect-ca.pem",
+}
+
 __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
            "APIError", "ClientError", "ServerError", "ExternalError",
            "ServiceUnavailable", "Transfer", "Delete"]
 
 # client version
-__version__ = "0.10.9"
+__version__ = "0.10.10"
 
 class TransferAPIClient(object):
     """
@@ -961,6 +967,23 @@ def encode_qs(kwargs=None, **kw):
     else:
         return ""
 
+
+def get_ca(base_url):
+    url_parts = urlparse(base_url)
+    netloc_parts = url_parts.netloc.split(":", 1)
+    hostname = netloc_parts[0]
+    path = HOST_CA_MAP.get(hostname)
+    if path is None:
+        return None
+    try:
+        import pkg_resources
+        path = pkg_resources.resource_filename(__name__, path)
+    except ImportError:
+        pkg_path = os.path.dirname(__file__)
+        path = os.path.join(pkg_path, path)
+    return path
+
+
 def process_args(args=None, parser=None):
     from optparse import OptionParser
 
@@ -999,7 +1022,11 @@ def process_args(args=None, parser=None):
         parser.error("username arguments is required")
 
     if not options.server_ca_file:
-        parser.error("missing required option -C (--server-ca-file)")
+        # Try to load the appropriate CA based on base url.
+        options.server_ca_file = get_ca(options.base_url)
+        if options.server_ca_file is None:
+            parser.error("no CA found for base URL '%s', use -C to specify a CA"
+                         % options.base_url)
 
     if options.password_prompt:
         if options.saml_cookie or options.key_file or options.cert_file:

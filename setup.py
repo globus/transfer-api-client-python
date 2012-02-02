@@ -1,13 +1,14 @@
 from distutils.core import setup
 
 setup(name="globusonline-transfer-api-client",
-      version="0.10.9",
+      version="0.10.10",
       description="Globus Online Transfer API client library",
       author="Bryce Allen",
       author_email="ballen@ci.uchicago.edu",
       url="https://github.com/globusonline/transfer-api-client-python",
       packages=["globusonline", "globusonline.transfer",
                 "globusonline.transfer.api_client"],
+      package_data={ "globusonline.transfer.api_client": ["ca/*.pem"] },
       keywords=["globusonline"],
       classifiers=[
           "Development Status :: 4 - Beta",
