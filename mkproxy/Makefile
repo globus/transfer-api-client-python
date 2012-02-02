@@ -1,5 +1,5 @@
 mkproxy: mkproxy.c
-	gcc -o mkproxy mkproxy.c -lssl -lcrypto
+	gcc -o mkproxy mkproxy.c -lcrypto
 
 .PHONY: clean
 

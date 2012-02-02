@@ -30,7 +30,7 @@
  * Requires only gcc and openssl with headers. Tested with 0.9.8k and 1.0.0g,
  * but should work with any recent version.
  * @code
- *   gcc -o mkproxy mkproxy.c -lssl -lcrypto
+ *   gcc -o mkproxy mkproxy.c -lcrypto
  * @endcode
  *
  * Example Usage:
@@ -54,6 +54,7 @@
 #include <openssl/x509v3.h>
 #include <openssl/pem.h>
 #include <openssl/bn.h>
+#include <openssl/conf.h>
 
 #define SERIAL_RAND_BITS	64
 #define USAGE "Usage: %s [lifetime in hours]\n"
@@ -74,7 +75,7 @@ int main(int argc, char **argv) {
     long hours = 0;
     char *endptr = "\1";
 
-    // TODO: optinally take issuer file path as arg instead of reading stdin?
+    // TODO: optionally take issuer file path as arg instead of reading stdin?
     if (argc == 1) {
         hours = 1;
     } else if (argc == 2) {
@@ -163,6 +164,7 @@ int write_proxy(BIO *bio_public_key, BIO *bio_issuer_credential, BIO *bio_out,
     BIGNUM *serial_bn = NULL;
     char *serial_decimal = NULL;
     X509_EXTENSION *ext = NULL;
+    CONF *conf = NULL;
 
     //int key_type = -1;
 
@@ -279,15 +281,25 @@ int write_proxy(BIO *bio_public_key, BIO *bio_issuer_credential, BIO *bio_out,
         goto end;
     }
 
+    conf = NCONF_new(NULL);
+    if (conf == NULL) {
+        BIO_printf(bio_err, "Failed to allocate nconf\n");
+        goto end;
+    }
+    X509V3_set_nconf(&ctx, conf);
     X509V3_set_ctx(&ctx, issuer, cert, NULL, NULL, 0);
     if (old_proxy) {
-        ext = X509V3_EXT_conf(NULL, &ctx, "keyUsage",
+        ext = X509V3_EXT_nconf(conf, &ctx, "keyUsage",
           "critical,Digital Signature, Key Encipherment, Data Encipherment");
     } else {
-        ext = X509V3_EXT_conf(NULL, &ctx, "proxyCertInfo",
-                              "critical,language:Inherit all");
+        ext = X509V3_EXT_nconf(conf, &ctx, "proxyCertInfo",
+                               "critical,language:Inherit all");
     }
-    X509_add_ext(cert, ext, -1);
+    if (ext == NULL) {
+        BIO_printf(bio_err, "Failed to create extension\n");
+        goto end;
+    }
+    X509_add_ext(cert, ext, 0);
 
     if (!X509_sign(cert, issuer_pkey, digest)) {
         BIO_printf(bio_err, "Failed to sign cert\n");
@@ -321,6 +333,8 @@ end:
         BN_free(serial_bn);
     if (serial_decimal != NULL)
         OPENSSL_free(serial_decimal);
+    if (conf != NULL)
+        NCONF_free(conf);
     if (ext != NULL)
         OPENSSL_free(ext);
     return rval;
