@@ -58,6 +58,7 @@ HOST_CA_MAP = {
     "transfer.api.globusonline.org": "ca/godaddy-ca.pem",
     "transfer.qa.api.globusonline.org": "ca/godaddy-ca.pem",
     "transfer.test.api.globusonline.org": "ca/globusconnect-ca.pem",
+    "www.globusonline.org": "ca/godaddy-ca.pem",
 }
 
 __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
@@ -817,6 +818,7 @@ class ActivationRequirementList(object):
     def __repr__(self):
         return str(self.json_data)
 
+
 def _get_host_port(url):
     o = urlparse(url)
     netloc_parts = o.netloc.split(":")
@@ -939,6 +941,7 @@ class ServiceUnavailable(APIError):
     """
     pass
 
+
 def _endpoint_path(endpoint_name, trailing_path=None):
     """
     endpoint_name must be percent encoded, because it may contain
@@ -948,6 +951,7 @@ def _endpoint_path(endpoint_name, trailing_path=None):
     if trailing_path:
         p += trailing_path
     return p
+
 
 def api_result(response, data):
     status_code = response.status
@@ -962,6 +966,7 @@ def api_result(response, data):
         raise InterfaceError("Unexpected status code in response: %d"
                              % status_code)
 
+
 def encode_qs(kwargs=None, **kw):
     if kwargs is None:
         kwargs = kw
@@ -974,10 +979,13 @@ def encode_qs(kwargs=None, **kw):
         return ""
 
 
-def get_ca(base_url):
-    url_parts = urlparse(base_url)
-    netloc_parts = url_parts.netloc.split(":", 1)
-    hostname = netloc_parts[0]
+def get_ca(base_url_or_hostname):
+    if base_url_or_hostname.startswith("https://"):
+        url_parts = urlparse(base_url_or_hostname)
+        netloc_parts = url_parts.netloc.split(":", 1)
+        hostname = netloc_parts[0]
+    else:
+        hostname = base_url_or_hostname
     path = HOST_CA_MAP.get(hostname)
     if path is None:
         return None
@@ -994,8 +1002,7 @@ def process_args(args=None, parser=None):
     from optparse import OptionParser
 
     if not parser:
-        usage = "usage: %prog username -k KEY_FILE -c CERT_FILE " \
-              + "-C SERVER_CA_FILE"
+        usage = "usage: %prog username [options]"
         parser = OptionParser(usage=usage)
 
     parser.add_option("-C", "--server-ca-file", dest="server_ca_file",

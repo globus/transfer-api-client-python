@@ -14,13 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Demonstrate how to use the delegate_proxy activation method. This version takes
-a proxy chain created externally (e.g. using mkproxy).
+Test a proxy chain created with mkproxy or some other external method
+by using it to activate an endpoint. Real applications should use the provided
+API instead - see
+globusonline/transfer/api_client/examples/delegate_proxy_activate.py.
 
 Usage:
 
- delegate_proxy_activate.py USERNAME 'ENDPOINT_NAME' /path/to/proxy_chain \
-    -k /path/to/auth/key -c /path/to/auth/cert -C ca/gd-bundle_ca.cert
+ # Create proxy with 10 hour lifetime. server.pubkey must contain the PEM
+ # from the public_key activation_requirement.
+ cat server.pubkey /path/to/activation/credential \
+    | mkproxy 10 > /tmp/proxy_chain
+ test_activate.py USERNAME 'ENDPOINT_NAME' /tmp/proxy_chain \
+    -k /path/to/auth/key -c /path/to/auth/cert
 
 The endpoint name may contain a # which is a shell comment, so be sure to
 quote the endpoint name.
@@ -30,7 +36,6 @@ import sys
 import subprocess
 
 from globusonline.transfer.api_client import create_client_from_args
-from globusonline.transfer.api_client import create_proxy_from_file
 
 if __name__ == '__main__':
     api, args = create_client_from_args()

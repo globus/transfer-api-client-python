@@ -34,7 +34,7 @@ headers are available:
 Usage:
 
  delegate_proxy_activate.py USERNAME 'ENDPOINT_NAME' /path/to/credential \
-    -k /path/to/auth/key -c /path/to/auth/cert -C ca/gd-bundle_ca.cert
+    -k /path/to/auth/key -c /path/to/auth/cert
 
 The credential passed as the third argument is what is used to activate the
 endpoint, and may be the same or different from the credential used to

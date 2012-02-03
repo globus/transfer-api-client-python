@@ -48,6 +48,9 @@ def get_go_auth(ca_certs, username=None, password=None):
              parameter the caller may need that as well, and may want
              to cache the password.
     """
+    if ca_certs is None:
+        from globusonline.transfer.api_client import get_ca
+        ca_certs = get_ca(HOST)
     if username is None:
         print "GO Username: ",
         sys.stdout.flush()
@@ -92,7 +95,7 @@ def process_args(args=None, parser=None):
     from optparse import OptionParser
 
     if not parser:
-        usage = "usage: %prog -C SERVER_CA_FILE [username]"
+        usage = "usage: %prog [username]"
         parser = OptionParser(usage=usage)
 
     parser.add_option("-C", "--server-ca-file", dest="server_ca_file",
@@ -100,8 +103,6 @@ def process_args(args=None, parser=None):
                       metavar="SERVER_CA_FILE")
 
     options, args = parser.parse_args(args)
-    if not options.server_ca_file:
-        parser.error("missing required option -C (--server-ca-file)")
 
     return options, args
 

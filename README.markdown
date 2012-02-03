@@ -53,7 +53,7 @@ Changlog
 0.10.10
 -------
 * Include CAs in the package; the `server_ca_file` parameter (and the -C
-  command line arg) are no longer required.
+  command line arg) is no longer required.
 * Alternate `delegate_proxy` activation implementation using a custom C
   program called `mkproxy` instead of M2Crypto. See `mkproxy/README.markdown`
   for details. `mkproxy` is the preferred implementations, so if both the
