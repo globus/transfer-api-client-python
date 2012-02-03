@@ -16,8 +16,7 @@
 """
 Script for using the client in an interactive interpreter, e.g.
 
- python -i -m globusonline.transfer.api_client.main USERNAME -p \
-    -C ca/gd-bundle_ca.cert
+ python -i -m globusonline.transfer.api_client.main USERNAME -p
 
 It creates a TransferAPIClient instance called "api" with the credentials
 passed on the command line, which you can use to make requests.

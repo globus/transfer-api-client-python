@@ -18,9 +18,7 @@ Demonstrate API calls.
 
 Example run using standard globus toolkit certificate locations:
 
-python example.py USERNAME -k ~/.globus/userkey.pem \
-           -c ~/.globus/usercert.pem \
-           -C ../gd-bundle_ca.cert
+python example.py USERNAME -k ~/.globus/userkey.pem -c ~/.globus/usercert.pem
 """
 import time
 from datetime import datetime, timedelta

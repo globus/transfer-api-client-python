@@ -15,9 +15,9 @@
 # limitations under the License.
 """
 Demonstrate how to use the delegate_proxy activation method. Note that this
-method requires M2Crypto.
+method requires either M2Crypto or a custom C program called mkproxy, available from the project github (but not currently included in the PyPI package).
 
-In Fedora/RHEL/CentOS:
+To install M2Crypto in Fedora/RHEL/CentOS:
 
  $ yum install m2crypto
 
@@ -47,7 +47,7 @@ quote the endpoint name.
 import sys
 
 from globusonline.transfer.api_client import create_client_from_args
-from globusonline.transfer.api_client import create_proxy_from_file
+from globusonline.transfer.api_client.x509_proxy import create_proxy_from_file
 
 if __name__ == '__main__':
     api, args = create_client_from_args()

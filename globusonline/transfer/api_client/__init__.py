@@ -20,7 +20,6 @@ for experimenting with the API:
 
 ipython -- transfer_api.py USERNAME -k ~/.globus/userkey.pem \
            -c ~/.globus/usercert.pem \
-           -C ../gd-bundle_ca.cert
 
 OR
 
@@ -43,7 +42,6 @@ import json
 import urllib
 import time
 import ssl
-import struct
 import traceback
 from urlparse import urlparse
 from httplib import BadStatusLine
@@ -86,7 +84,7 @@ class TransferAPIClient(object):
     the logged in user's endpoints.
     """
 
-    def __init__(self, username, server_ca_file,
+    def __init__(self, username, server_ca_file=None,
                  cert_file=None, key_file=None, saml_cookie=None,
                  base_url=DEFAULT_BASE_URL,
                  timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
@@ -105,7 +103,9 @@ class TransferAPIClient(object):
         @param username: username to connect to the service with.
         @param server_ca_file: path to file containing one or more x509
                                certificates, used to verify the server
-                               certificate.
+                               certificate. If not specified tries to choose
+                               the appropriate CA based on the hostname in
+                               base_url.
         @param cert_file: path to file containing the x509 client certificate
                           for authentication.
         @param key_file: path to file containg the RSA key for client
@@ -126,21 +126,27 @@ class TransferAPIClient(object):
                              will be raised. max_attempts=1 implies no
                              retrying.
         """
+        if server_ca_file is None:
+            server_ca_file = get_ca(base_url)
+            if server_ca_file is None:
+                raise InterfaceError("no CA found for base URL '%s'"
+                                     % base_url)
         if not os.path.isfile(server_ca_file):
-            raise InterfaceError("server_ca_file not found: %s"
+            raise InterfaceError("server_ca_file not found: '%s'"
                                  % server_ca_file)
 
         if saml_cookie and (cert_file or key_file):
-                raise InterfaceError("pass either cooie or cert and key"
+                raise InterfaceError("pass either cookie or cert/key"
                                      " files, not both.")
-        if cert_file:
-            if not os.path.isfile(cert_file):
-                raise InterfaceError("cert_file not found: %s" % cert_file)
+        if cert_file or key_file:
             if not key_file:
                 key_file = cert_file
-            else:
-                if not os.path.isfile(key_file):
-                    raise InterfaceError("key_file not found: %s" % key_file)
+            if not cert_file:
+                cert_file = key_file
+            if not os.path.isfile(cert_file):
+                raise InterfaceError("cert_file not found: %s" % cert_file)
+            if not os.path.isfile(key_file):
+                raise InterfaceError("key_file not found: %s" % key_file)
 
         if max_attempts is not None:
             max_attempts = int(max_attempts)
@@ -1021,13 +1027,6 @@ def process_args(args=None, parser=None):
     if len(args) < 1:
         parser.error("username arguments is required")
 
-    if not options.server_ca_file:
-        # Try to load the appropriate CA based on base url.
-        options.server_ca_file = get_ca(options.base_url)
-        if options.server_ca_file is None:
-            parser.error("no CA found for base URL '%s', use -C to specify a CA"
-                         % options.base_url)
-
     if options.password_prompt:
         if options.saml_cookie or options.key_file or options.cert_file:
             parser.error("use only one authentication method: -p, -k/-c, or -s")
@@ -1065,122 +1064,6 @@ def process_args(args=None, parser=None):
             options.cert_file = options.key_file
 
     return options, args
-
-
-def get_random_serial():
-    """
-    Under RFC 3820 there are many ways to generate the serial number. However
-    making the number unpredictable has security benefits, e.g. it can make
-    this style of attack more difficult:
-
-    http://www.win.tue.nl/hashclash/rogue-ca
-    """
-    return struct.unpack("<Q", os.urandom(8))[0]
-
-
-def create_proxy_from_file(issuer_cred_file, public_key, lifetime=3600):
-    """
-    Create a proxy of the credential in issuer_cred_file, using the
-    specified public key and lifetime.
-
-    @param issuer_cred_file: file containing a credential, including the
-                             certificate, public key, and optionally chain
-                             certs.
-    @param public_key: the public key as a PEM string
-    @param lifetime: lifetime of the proxy in seconds (default 1 hour)
-    """
-    with open(issuer_cred_file) as f:
-        issuer_cred = f.read()
-    return create_proxy(issuer_cred, public_key, lifetime)
-
-
-_begin_private_key = "-----BEGIN RSA PRIVATE KEY-----"
-_end_private_key = "-----END RSA PRIVATE KEY-----"
-
-# The issuer is required to have this bit set if keyUsage is present;
-# see RFC 3820 section 3.1.
-REQUIRED_KEY_USAGE = ["Digital Signature"]
-def create_proxy(issuer_cred, public_key, lifetime=3600):
-    from M2Crypto import X509, RSA, EVP, ASN1, BIO
-
-    # Standard order is cert, private key, then the chain.
-    _begin_idx = issuer_cred.index(_begin_private_key)
-    _end_idx = issuer_cred.index(_end_private_key) + len(_end_private_key)
-    issuer_key = issuer_cred[_begin_idx:_end_idx]
-    issuer_cert = issuer_cred[:_begin_idx]
-    issuer_chain = issuer_cert + issuer_cred[_end_idx:]
-
-    proxy = X509.X509()
-    proxy.set_version(2)
-    serial = get_random_serial()
-    proxy.set_serial_number(serial)
-
-    now = long(time.time())
-    not_before = ASN1.ASN1_UTCTIME()
-    not_before.set_time(now)
-    proxy.set_not_before(not_before)
-
-    not_after = ASN1.ASN1_UTCTIME()
-    not_after.set_time(now + lifetime)
-    proxy.set_not_after(not_after)
-
-    pkey = EVP.PKey()
-    tmp_bio = BIO.MemoryBuffer(str(public_key))
-    rsa = RSA.load_pub_key_bio(tmp_bio)
-    pkey.assign_rsa(rsa)
-    del rsa
-    del tmp_bio
-    proxy.set_pubkey(pkey)
-
-    issuer = X509.load_cert_string(issuer_cert)
-
-    # If the issuer has keyUsage extension, make sure it contains all
-    # the values we require.
-    try:
-        keyUsageExt = issuer.get_ext("keyUsage")
-        if keyUsageExt:
-            values = keyUsageExt.get_value().split(", ")
-            for required in REQUIRED_KEY_USAGE:
-                if required not in values:
-                    raise InterfaceError(
-                      "issuer contains keyUsage without required usage '%s'"
-                      % required)
-    except LookupError:
-        pass
-
-    # hack to get a copy of the X509 name that we can append to.
-    issuer_copy = X509.load_cert_string(issuer_cert)
-    proxy_subject = issuer_copy.get_subject()
-
-    proxy_subject.add_entry_by_txt(field="CN", type=ASN1.MBSTRING_ASC,
-                                   entry=str(serial),
-                                   len=-1, loc=-1, set=0)
-    proxy.set_subject(proxy_subject)
-    proxy.set_issuer(issuer.get_subject())
-
-    # create a full proxy
-    pci_ext = X509.new_extension("proxyCertInfo",
-                                 "critical,language:Inherit all", 1)
-    proxy.add_ext(pci_ext)
-
-    # Clients may wish to add restrictions to the proxy that are not
-    # present in the issuer. To do this, keyUsage and extendedKeyUsage
-    # extensions can be added to the proxy; the effictive usage is
-    # defined as the intersection of the usage. See section 4.2 of the
-    # RFC. In the absense of application specific requirements, we
-    # choose not to add either extension, in which case the usage of the
-    # issuer(s) will be inherited as is. See the example below if you
-    # wish to customize this behavior.
-    #
-    #ku_ext = X509.new_extension("keyUsage",
-    #            "Digital Signature, Key Encipherment, Data Encipherment", 1)
-    #proxy.add_ext(ku_ext)
-
-    issuer_rsa = RSA.load_key_string(issuer_key)
-    sign_pkey = EVP.PKey()
-    sign_pkey.assign_rsa(issuer_rsa)
-    proxy.sign(pkey=sign_pkey, md="sha1")
-    return proxy.as_pem() + issuer_chain
 
 
 def create_client_from_args(args=None):

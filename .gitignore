@@ -2,3 +2,5 @@ build
 MANIFEST
 dist
 *.pyc
+globusonline/transfer/api_client/x509_proxy/mkproxy
+mkproxy/mkproxy

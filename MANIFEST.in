@@ -1,3 +1,6 @@
 include README.markdown
-recursive-include examples *.py
-recursive-include ca *.cert
+include mkproxy/mkproxy.c
+include mkproxy/Makefile
+include mkproxy/README.markdown
+recursive-include globusonline/transfer/api_client/examples *.py
+recursive-include globusonline/transfer/api_client/ca *.pem
