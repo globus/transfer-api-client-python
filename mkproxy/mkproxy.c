@@ -57,6 +57,8 @@
 #include <openssl/conf.h>
 
 #define SERIAL_RAND_BITS	64
+#define LIMITED_PROXY_CN "limited proxy"
+#define PROXY_CN "proxy"
 #define USAGE "Usage: %s [lifetime in hours]\n"
 
 int write_proxy(BIO *bio_public_key, BIO *bio_issuer_credential, BIO *bio_out,
@@ -151,7 +153,7 @@ int write_proxy(BIO *bio_public_key, BIO *bio_issuer_credential, BIO *bio_out,
     X509V3_CTX ctx;
     const EVP_MD *digest = EVP_sha1(); // does not require free
     char *subject_addition = NULL;
-    char cn_buf[10] = { '\0' };
+    char cn_buf[sizeof(LIMITED_PROXY_CN)] = { '\0' };
     X509_NAME_ENTRY *cn_entry = NULL;
 
     // free required
@@ -232,7 +234,8 @@ int write_proxy(BIO *bio_public_key, BIO *bio_issuer_credential, BIO *bio_out,
     if (j != -1) {
         cn_entry = X509_NAME_get_entry(issuer_name, j);
         X509_NAME_ENTRY_get_text(cn_entry, cn_buf, sizeof(cn_buf));
-        if (strcmp(cn_buf, "proxy") == 0) {
+        if (strcmp(cn_buf, PROXY_CN) == 0
+            || strcmp(cn_buf, LIMITED_PROXY_CN) == 0) {
             old_proxy = 1;
         }
     }
