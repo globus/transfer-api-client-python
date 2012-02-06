@@ -22,13 +22,11 @@ __all__ = ["create_proxy", "create_proxy_from_file"]
 
 # Favor the C program implementation if available.
 if mkproxy.get_mkproxy_path():
-    implementation = "mkproxy"
     from globusonline.transfer.api_client.x509_proxy.mkproxy \
                                                 import create_proxy_from_file
+    implementation = "mkproxy"
 else:
     # raises ImportError if M2Crypto is not available
     from globusonline.transfer.api_client.x509_proxy.m2 \
                                                 import create_proxy_from_file
     implementation = "m2"
-
-print "proxy implementation:", implementation

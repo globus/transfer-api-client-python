@@ -31,6 +31,10 @@ headers are available:
  $ easy_install m2crypto
 
 
+For documentation on mkproxy, see the mkproxy subdirectory on github:
+ https://github.com/globusonline/transfer-api-client-python
+
+
 Usage:
 
  delegate_proxy_activate.py USERNAME 'ENDPOINT_NAME' /path/to/credential \
@@ -47,7 +51,7 @@ quote the endpoint name.
 import sys
 
 from globusonline.transfer.api_client import create_client_from_args
-from globusonline.transfer.api_client.x509_proxy import create_proxy_from_file
+from globusonline.transfer.api_client import x509_proxy
 
 if __name__ == '__main__':
     api, args = create_client_from_args()
@@ -59,10 +63,12 @@ if __name__ == '__main__':
     ep = args[0]
     cred_file = args[1]
 
+    print "Using x509_proxy implementation '%s'" % x509_proxy.implementation
+
     _, _, reqs = api.endpoint_activation_requirements(ep,
                                                       type="delegate_proxy")
     public_key = reqs.get_requirement_value("delegate_proxy", "public_key")
-    proxy = create_proxy_from_file(cred_file, public_key)
+    proxy = x509_proxy.create_proxy_from_file(cred_file, public_key)
     reqs.set_requirement_value("delegate_proxy", "proxy_chain", proxy)
 
     result = api.endpoint_activate(ep, reqs)

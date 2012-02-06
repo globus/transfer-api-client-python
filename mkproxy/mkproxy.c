@@ -168,8 +168,6 @@ int write_proxy(BIO *bio_public_key, BIO *bio_issuer_credential, BIO *bio_out,
     X509_EXTENSION *ext = NULL;
     CONF *conf = NULL;
 
-    //int key_type = -1;
-
     // Read pubkey from stdin
     pkey = PEM_read_bio_PUBKEY(bio_public_key, NULL, NULL, NULL);
     if (pkey == NULL) {
@@ -195,18 +193,6 @@ int write_proxy(BIO *bio_public_key, BIO *bio_issuer_credential, BIO *bio_out,
         BIO_printf(bio_err, "failed to read issuer chain\n");
         goto end;
     }
-
-    // Debug stuff
-    /*
-    key_type = EVP_PKEY_type(pkey->type);
-    if (key_type == EVP_PKEY_RSA) {
-        BIO_printf(bio_err, "key_type = EVP_PKEY_RSA\n");
-    } else if (key_type == NID_undef) {
-        BIO_printf(bio_err, "key_type = NID_undef\n");
-    } else {
-        BIO_printf(bio_err, "unknown key type\n");
-    }
-    */
 
     // Create cert
     if ((cert = X509_new()) == NULL) {

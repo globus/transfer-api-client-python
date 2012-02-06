@@ -47,6 +47,10 @@ if __name__ == '__main__':
     ep = args[0]
     proxy_chain_file = args[1]
 
+    # Deactivate so if the activation fails, testing ls afterward will also
+    # fail and not use some old working credential from previous activation.
+    api.endpoint_deactivate(ep)
+
     _, _, reqs = api.endpoint_activation_requirements(ep,
                                                       type="delegate_proxy")
     with open(proxy_chain_file) as f:

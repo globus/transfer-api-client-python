@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Implementation using mkproxy C program.
+Implementation using mkproxy C program. Requires that the executable be
+installed in the directory containing this module (the x509_proxy directory).
 
 If linked against a non-standard openssl library, make sure that
 LD_LIBRARY_PATH is set accordingly in the environment.
