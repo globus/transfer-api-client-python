@@ -683,12 +683,13 @@ class Delete(object):
     delete directories, the recursive option must be set.
     """
     def __init__(self, submission_id, endpoint, deadline=None, recursive=False,
-                 ignore_missing=True, label=None):
+                 ignore_missing=True, label=None, interpret_globs=False):
         self.submission_id = submission_id
         self.endpoint = endpoint
         self.deadline = deadline
         self.recursive = recursive
         self.ignore_missing = ignore_missing
+        self.interpret_globs = interpret_globs
         self.label = label
         self.items = []
 
@@ -708,6 +709,7 @@ class Delete(object):
                  "deadline": deadline,
                  "recursive": self.recursive,
                  "ignore_missing": self.ignore_missing,
+                 "interpret_globs": self.interpret_globs,
                  "label": self.label,
                  "DATA": self.items }
 
