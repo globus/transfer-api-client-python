@@ -66,7 +66,7 @@ __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
            "ServiceUnavailable", "Transfer", "Delete"]
 
 # client version
-__version__ = "0.10.10"
+__version__ = "0.10.11"
 
 class TransferAPIClient(object):
     """
