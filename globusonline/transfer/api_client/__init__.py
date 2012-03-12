@@ -807,6 +807,9 @@ class ActivationRequirementList(object):
         to indicate what type of activation is actually desired.
         """
         self.req_list = [req for req in self.req_list if req["type"] == type]
+        # remap
+        keys = [r["type"] + "." + r["name"] for r in self.req_list]
+        self.index_map = dict(zip(keys, xrange(len(keys))))
 
     def as_json(self):
         return json.dumps(self.json_data)
