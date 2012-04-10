@@ -50,6 +50,14 @@ systems, but is useful for development and testing.
 Changlog
 ========
 
+0.10.11
+-------
+* Fix Delete when not passing a deadline argument.
+* Improve interactive script by importing Transfer and Delete.
+* Add `interpret_globs` option to Delete.
+* Fix `set_submit_type` in `ActivationRequirementList` to properly update
+  the mapping.
+
 0.10.10
 -------
 * Include CAs in the package; the `server_ca_file` parameter (and the -C
