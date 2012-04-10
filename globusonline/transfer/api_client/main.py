@@ -21,7 +21,6 @@ Script for using the client in an interactive interpreter, e.g.
 It creates a TransferAPIClient instance called "api" with the credentials
 passed on the command line, which you can use to make requests.
 
- >>> import readline # This gives you command history.
  >>> print dir(api) # See a list of available methods.
  >>> code, reason, data = api.tasksummary() # Test out tasksummary.
  >>> api.set_debug_print(True, True) # Print raw request/responses.
@@ -30,9 +29,11 @@ passed on the command line, which you can use to make requests.
 """
 
 import globusonline.transfer.api_client
+from globusonline.transfer.api_client import Transfer, Delete, APIError
 
 if __name__ == '__main__':
     try:
+        # for command history
         import readline
     except ImportError:
         pass

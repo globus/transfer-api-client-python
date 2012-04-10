@@ -45,6 +45,7 @@ import ssl
 import traceback
 from urlparse import urlparse
 from httplib import BadStatusLine
+from datetime import datetime, timedelta
 
 from globusonline.transfer.api_client.verified_https \
     import VerifiedHTTPSConnection
@@ -699,7 +700,10 @@ class Delete(object):
 
     def as_data(self):
         if self.deadline is None:
-            deadline = None
+            # TODO: there is a bug in the API that doesn't allow null
+            # deadline for delete. Change this once it's fixed.
+            #deadline = None
+            deadline = str(datetime.utcnow() + timedelta(seconds=3600 * 24))
         else:
             deadline = str(self.deadline)
         return { "DATA_TYPE": "delete",
