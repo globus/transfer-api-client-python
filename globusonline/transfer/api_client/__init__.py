@@ -67,7 +67,7 @@ __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
            "ServiceUnavailable", "Transfer", "Delete"]
 
 # client version
-__version__ = "0.10.11"
+__version__ = "0.10.12"
 
 class TransferAPIClient(object):
     """
@@ -635,14 +635,21 @@ class Transfer(object):
     containing the source and destination paths, along with flags.
     A transfer can only invovle one source and one destination endpoint, so
     they are set in the constructor.
+
+    @param **kw: support additional top level options without having to
+                 add them to the client API. New options should use this.
+                 Example options are encrypt_data and verify_checksum,
+                 both of which are boolean and default to False if not
+                 specified.
     """
     def __init__(self, submission_id, source_endpoint, destination_endpoint,
-                 deadline=None, sync_level=None, label=None):
+                 deadline=None, sync_level=None, label=None, **kw):
         self.submission_id = submission_id
         self.source_endpoint = source_endpoint
         self.destination_endpoint = destination_endpoint
         self.deadline = deadline
         self.sync_level = sync_level
+        self.kw = kw
         self.label = label
         self.items = []
 
@@ -660,7 +667,7 @@ class Transfer(object):
             deadline = None
         else:
             deadline = str(self.deadline)
-        return { "DATA_TYPE": "transfer",
+        data = { "DATA_TYPE": "transfer",
                  "length": len(self.items),
                  "submission_id": self.submission_id,
                  "source_endpoint": self.source_endpoint,
@@ -669,6 +676,9 @@ class Transfer(object):
                  "sync_level": self.sync_level,
                  "label": self.label,
                  "DATA": self.items }
+        if self.kw:
+            data.update(self.kw)
+        return data
 
     def as_json(self):
         return json.dumps(self.as_data())

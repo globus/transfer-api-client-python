@@ -50,6 +50,12 @@ systems, but is useful for development and testing.
 Changlog
 ========
 
+0.10.12
+-------
+* Support keyword args to `Transfer` constructor; can be used to pass
+  `encrypt_data`, `verify_checksum`, and any options added in the future,
+  without requiring a client library update.
+
 0.10.11
 -------
 * Fix Delete when not passing a deadline argument.
