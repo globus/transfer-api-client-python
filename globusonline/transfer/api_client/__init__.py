@@ -90,7 +90,8 @@ class TransferAPIClient(object):
                  cert_file=None, key_file=None, saml_cookie=None,
                  base_url=DEFAULT_BASE_URL,
                  timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
-                 httplib_debuglevel=0, max_attempts=1):
+                 httplib_debuglevel=0, max_attempts=1,
+                 header_auth=None):
         """
         Initialize a client with the client credential and optional alternate
         base URL.
@@ -115,6 +116,8 @@ class TransferAPIClient(object):
                          uses cert_file.
         @param saml_cookie: contents of 'saml' cookie from
                             www.globusonline.org.
+        @param header_auth: contents of the saml cookie, but used for header
+                            authentication, not cookie auth.
         @param base_url: optionally specify an alternate base url, if testing
                          out an unreleased or alternatively hosted version of
                          the API.
@@ -136,6 +139,9 @@ class TransferAPIClient(object):
         if not os.path.isfile(server_ca_file):
             raise InterfaceError("server_ca_file not found: '%s'"
                                  % server_ca_file)
+
+        if header_auth and (saml_cookie or (cert_file or key_file)):
+                raise InterfaceError("pass only one auth method")
 
         if saml_cookie and (cert_file or key_file):
                 raise InterfaceError("pass either cookie or cert/key"
@@ -160,6 +166,7 @@ class TransferAPIClient(object):
         self.saml_cookie = saml_cookie
         self.cert_file = cert_file
         self.key_file = key_file
+        self.header_auth = header_auth
 
         self.username = username
         self.server_ca_file = server_ca_file
@@ -251,6 +258,8 @@ class TransferAPIClient(object):
 
         if self.saml_cookie:
             headers["Cookie"] = "saml=%s" % self.saml_cookie
+        elif self.header_auth:
+            headers["Authorization"] = "Bearer %s" % self.header_auth
 
         headers["User-Agent"] = self.user_agent
         headers["X-Transfer-API-Client"] = self.client_info
@@ -1045,6 +1054,9 @@ def process_args(args=None, parser=None):
     parser.add_option("-a", "--max-attempts", dest="max_attempts", type="int",
                       help="retry up to this many times on connection errors",
                       metavar="ATTEMPTS")
+    parser.add_option("-B", "--bearer", dest="header_auth",
+                      help="Use header-based authentication",
+                      metavar="BEARER", type="str")
     parser.set_defaults(base_url=DEFAULT_BASE_URL,
                         max_attempts=1,
                         timeout=socket._GLOBAL_DEFAULT_TIMEOUT)
@@ -1055,7 +1067,7 @@ def process_args(args=None, parser=None):
 
     if options.password_prompt:
         if options.saml_cookie or options.key_file or options.cert_file:
-            parser.error("use only one authentication method: -p, -k/-c, or -s")
+            parser.error("use only one authentication method: -p, -k/-c, -B, or -s")
         username = args[0]
         success = False
         for i in xrange(5):
@@ -1075,16 +1087,21 @@ def process_args(args=None, parser=None):
         if not success:
             sys.stderr.write("too many failed attempts, exiting\n")
             sys.exit(2)
+    elif options.header_auth:
+        if options.key_file or options.cert_file or options.saml_cookie:
+            parser.error("use only one authentication method: -p, -k/-c, "
+                         "-B, or -s")
     elif options.saml_cookie:
         if options.key_file or options.cert_file:
-            parser.error("use only one authentication method: -p, -k/-c, or -s")
+            parser.error("use only one authentication method: -p, -k/-c, "
+                         "-B, or -s")
     else:
         # If only one of -k/-c is specified, assume both the key and cert are
         # in the same file.
         if not options.key_file:
             if not options.cert_file:
                 parser.error(
-                    "specify one authentication method: -p, -k/-c, or -s")
+                    "specify one authentication method: -p, -k/-c, -B, or -s")
             options.key_file = options.cert_file
         if not options.cert_file:
             options.cert_file = options.key_file
@@ -1107,6 +1124,7 @@ def create_client_from_args(args=None):
                             key_file=options.key_file,
                             saml_cookie=options.saml_cookie,
                             base_url=options.base_url,
+                            header_auth=options.header_auth,
                             timeout=options.timeout,
                             max_attempts=options.max_attempts)
     return api, args[1:]
