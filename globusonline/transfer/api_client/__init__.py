@@ -1066,8 +1066,10 @@ def process_args(args=None, parser=None):
         parser.error("username arguments is required")
 
     if options.password_prompt:
-        if options.saml_cookie or options.key_file or options.cert_file:
-            parser.error("use only one authentication method: -p, -k/-c, -B, or -s")
+        if (options.saml_cookie or options.header_auth
+            or options.key_file or options.cert_file):
+            parser.error(
+                "use only one authentication method: -p, -k/-c, -B, or -s")
         username = args[0]
         success = False
         for i in xrange(5):
@@ -1075,7 +1077,7 @@ def process_args(args=None, parser=None):
                 result = get_go_auth(ca_certs=options.server_ca_file,
                                      username=username)
                 args[0] = result.username
-                options.saml_cookie = result.cookie
+                options.header_auth = result.cookie
                 success = True
                 break
             except InterfaceError as e:
