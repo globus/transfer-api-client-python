@@ -27,12 +27,13 @@ import urllib
 import getpass
 from Cookie import BaseCookie
 from collections import namedtuple
+import json
 
 from globusonline.transfer.api_client.verified_https \
     import VerifiedHTTPSConnection
 
 HOST = "www.globusonline.org"
-PATH = "/authenticate"
+PATH = "/service/graph/authenticate"
 PORT = 443
 
 GOAuthResult = namedtuple("GOAuthResult", "username password cookie")
@@ -58,11 +59,12 @@ def get_go_auth(ca_certs, username=None, password=None):
     if password is None:
         password = getpass.getpass("GO Password: ")
 
-    headers = { "Content-type": "application/x-www-form-urlencoded",
-                "Hostname": HOST }
+    headers = { "Content-type": "application/json; charset=UTF-8",
+                "Hostname": HOST,
+                "Accept": "application/json; charset=UTF-8" }
     c = VerifiedHTTPSConnection(HOST, PORT, ca_certs=ca_certs)
-    body = urllib.urlencode(dict(username=username,
-                                 password=password))
+    body = json.dumps(dict(username=username,
+                           password=password))
     c.request("POST", PATH, body=body, headers=headers)
     response = c.getresponse()
     set_cookie_header = response.getheader("set-cookie")
