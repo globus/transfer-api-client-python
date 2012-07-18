@@ -52,9 +52,13 @@ Changlog
 
 0.10.12
 -------
+* Fix password prompt authentication to work with current globusonline
+  website.
 * Support keyword args to `Transfer` constructor; can be used to pass
   `encrypt_data`, `verify_checksum`, and any options added in the future,
   without requiring a client library update.
+* Support Bearer auth header for passing the auth token in addition to
+  the cookie option.
 
 0.10.11
 -------
