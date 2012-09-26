@@ -38,7 +38,7 @@ def create_proxy_from_file(issuer_cred_file, public_key, lifetime_hours=1):
     specified public key and lifetime.
 
     @param issuer_cred_file: file containing a credential, including the
-                             certificate, public key, and optionally chain
+                             certificate, private key, and optionally chain
                              certs.
     @param public_key: the public key as a PEM string
     @param lifetime_hours: lifetime of the proxy in hours (default 1)

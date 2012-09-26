@@ -67,7 +67,7 @@ __all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
            "ServiceUnavailable", "Transfer", "Delete"]
 
 # client version
-__version__ = "0.10.12"
+__version__ = "0.10.13"
 
 class TransferAPIClient(object):
     """
@@ -478,8 +478,9 @@ class TransferAPIClient(object):
         """
         @param endpoint_name: partial or canonical name of endpoint to
                               activate.
-        @param filled_requirements: ActivationRequirementList instance,
-                                    or None to attempt auto-activation.
+        @param filled_requirements: ActivationRequirementList instance with
+                                    required values set for one activation
+                                    type.
         @type filled_requirements: ActivationRequirementList
         @param if_expires_in: don't re-activate endpoint if it doesn't expire
                               for this many minutes. If not passed, always
