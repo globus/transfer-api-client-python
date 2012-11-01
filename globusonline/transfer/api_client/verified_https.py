@@ -16,16 +16,23 @@ As of Python 2.6, httlib doesn't validate the server certificate.
 However the ssl module does support validation, so it's fairly easy to
 extend the stardant classes to support validation.
 
+match_hostname is from Python 3.2.
+
 See http://www.muchtooscrawled.com/2010/03/https-certificate-verification-in-python-with-urllib2/
 """
 import socket
 import ssl
 import os
+import re
 from httplib import HTTPSConnection
 from urlparse import urlsplit
 
 
 __all__ = ["VerifiedHTTPSConnection"]
+
+
+class CertificateError(ValueError):
+    pass
 
 
 def get_proxy():
@@ -36,7 +43,8 @@ def get_proxy():
     If port is not given it defaults to 443.
     """
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
-    if not proxy: return ()
+    if not proxy:
+        return None
     proxy = urlsplit(proxy).netloc.split(":")
     if len(proxy) == 1:
         return (proxy, 443)
@@ -88,10 +96,66 @@ class VerifiedHTTPSConnection(HTTPSConnection):
                                     cert_reqs=ssl.CERT_REQUIRED,
                                     ca_certs=self.ca_certs)
 
+        match_hostname(self.sock.getpeercert(), self.host)
 
-if __name__ == '__main__':
+
+def _dnsname_to_pat(dn):
+    pats = []
+    for frag in dn.split(r'.'):
+        if frag == '*':
+            # When '*' is a fragment by itself, it matches a non-empty dotless
+            # fragment.
+            pats.append('[^.]+')
+        else:
+            # Otherwise, '*' matches any dotless fragment.
+            frag = re.escape(frag)
+            pats.append(frag.replace(r'\*', '[^.]*'))
+    return re.compile(r'\A' + r'\.'.join(pats) + r'\Z', re.IGNORECASE)
+
+
+def match_hostname(cert, hostname):
+    """Verify that *cert* (in decoded format as returned by
+    SSLSocket.getpeercert()) matches the *hostname*.  RFC 2818 rules
+    are mostly followed, but IP addresses are not accepted for *hostname*.
+
+    CertificateError is raised on failure. On success, the function
+    returns nothing.
+    """
+    if not cert:
+        raise ValueError("empty or no certificate")
+    dnsnames = []
+    san = cert.get('subjectAltName', ())
+    for key, value in san:
+        if key == 'DNS':
+            if _dnsname_to_pat(value).match(hostname):
+                return
+            dnsnames.append(value)
+    if not dnsnames:
+        # The subject is only checked when there is no DNSName entry
+        # in subjectAltName
+        for sub in cert.get('subject', ()):
+            for key, value in sub:
+                # XXX according to RFC 2818, the most specific Common Name
+                # must be used.
+                if key == 'commonName':
+                    if _dnsname_to_pat(value).match(hostname):
+                        return
+                    dnsnames.append(value)
+    if len(dnsnames) > 1:
+        raise CertificateError("hostname %r "
+            "doesn't match either of %s"
+            % (hostname, ', '.join(map(repr, dnsnames))))
+    elif len(dnsnames) == 1:
+        raise CertificateError("hostname %r "
+            "doesn't match %r"
+            % (hostname, dnsnames[0]))
+    else:
+        raise CertificateError("no appropriate commonName or "
+            "subjectAltName fields were found")
+
+
+def test_main():
     import sys
-    import urlparse
     def exit_usage():
         sys.exit("Usage: %s CA_CERTS_FILE HTTPS_URL" % sys.argv[0])
 
@@ -135,3 +199,7 @@ if __name__ == '__main__':
     for h in r.getheaders():
         print "%s: %s" % h
     print r.read(),
+
+
+if __name__ == '__main__':
+    test_main()

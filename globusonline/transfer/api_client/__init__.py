@@ -49,7 +49,7 @@ from datetime import datetime, timedelta
 
 from globusonline.transfer.api_client.verified_https \
     import VerifiedHTTPSConnection
-from globusonline.transfer.api_client.get_go_cookie import get_go_cookie
+from globusonline.transfer.api_client.goauth import get_access_token
 
 API_VERSION = "v0.10"
 DEFAULT_BASE_URL = "https://transfer.api.globusonline.org/" + API_VERSION
@@ -73,7 +73,7 @@ __version__ = "0.10.13"
 
 class TransferAPIClient(object):
     """
-    Maintains a connection to the server as a specific users. Not thread
+    Maintains a connection to the server as a specific user. Not thread
     safe. Uses the JSON representations.
 
     Convenience api methods return a triple:
@@ -98,12 +98,16 @@ class TransferAPIClient(object):
         Initialize a client with the client credential and optional alternate
         base URL.
 
-        The main authentication method is using an x509 certificate,
-        in which case cert_file and key_file are required. A signed cookie
-        can also be used, but that is mainly used for internal testing;
-        however it is possible to copy the contents of the 'saml' cookie
-        from the browser after signing in to www.globusonline.org and use
-        that, until it expires.
+        For authentication, use either x509 or goauth; header_auth is
+        deprecated, and cookie auth is no longer supported.
+
+        x509 requires configuring your Globus Online account with the x509
+        certificate and having the private key available. Requires @cert_file
+        and @key_file, or just one if both are in the same file.
+
+        goauth requires fetching an access token from nexus, which supports
+        several authentication methods including basic auth - see the
+        goauth module and the nexus documentation.
 
         @param username: username to connect to the service with.
         @param server_ca_file: path to file containing one or more x509
@@ -118,7 +122,7 @@ class TransferAPIClient(object):
                          uses cert_file.
         @param header_auth: contents of the saml cookie, but used for header
                             authentication, not cookie auth.
-        @param goauth: goauth token retrieved from nexus.
+        @param goauth: goauth access token retrieved from nexus.
         @param base_url: optionally specify an alternate base url, if testing
                          out an unreleased or alternatively hosted version of
                          the API.
@@ -141,13 +145,15 @@ class TransferAPIClient(object):
             raise InterfaceError("server_ca_file not found: '%s'"
                                  % server_ca_file)
 
-        if header_auth and (goauth or (cert_file or key_file)):
-                raise InterfaceError("pass only one auth method")
+        self.headers = {}
 
-        if goauth and (cert_file or key_file):
-                raise InterfaceError("pass either cookie or cert/key"
-                                     " files, not both.")
-        if cert_file or key_file:
+        if header_auth:
+            if goauth or cert_file or key_file:
+                raise InterfaceError("pass only one auth method")
+        elif goauth:
+            if cert_file or key_file:
+                raise InterfaceError("pass only one auth method")
+        elif cert_file or key_file:
             if not key_file:
                 key_file = cert_file
             if not cert_file:
@@ -156,9 +162,9 @@ class TransferAPIClient(object):
                 raise InterfaceError("cert_file not found: %s" % cert_file)
             if not os.path.isfile(key_file):
                 raise InterfaceError("key_file not found: %s" % key_file)
-            self.headers = { "X-Transfer-API-X509-User": username }
+            self.headers["X-Transfer-API-X509-User"] = username
         else:
-            self.headers = {}
+            raise InterfaceError("pass one auth method")
 
         if max_attempts is not None:
             max_attempts = int(max_attempts)
@@ -1061,19 +1067,19 @@ def process_args(args=None, parser=None):
     if len(args) < 1:
         parser.error("username arguments is required")
 
+    auth_method_error = ("use only one authentication method:"
+                         + " -p, -k/-c, -B, or -g")
     if options.password_prompt:
         if (options.goauth or options.header_auth
         or options.key_file or options.cert_file):
-            parser.error(
-                "use only one authentication method: -p, -k/-c, -B, or -g")
+            parser.error(auth_method_error)
         username = args[0]
         success = False
         for i in xrange(5):
             try:
-                result = get_go_cookie(ca_certs=options.server_ca_file,
-                                       username=username)
+                result = get_access_token(username=username)
                 args[0] = result.username
-                options.header_auth = result.cookie
+                options.goauth = result.token
                 success = True
                 break
             except InterfaceError:
@@ -1087,19 +1093,16 @@ def process_args(args=None, parser=None):
             sys.exit(2)
     elif options.header_auth:
         if options.key_file or options.cert_file or options.goauth:
-            parser.error("use only one authentication method: -p, -k/-c, "
-                         "-B, or -g")
+            parser.error(auth_method_error)
     elif options.goauth:
         if options.key_file or options.cert_file:
-            parser.error("use only one authentication method: -p, -k/-c, "
-                         "-B, or -g")
+            parser.error(auth_method_error)
     else:
         # If only one of -k/-c is specified, assume both the key and cert are
         # in the same file.
         if not options.key_file:
             if not options.cert_file:
-                parser.error(
-                    "specify one authentication method: -p, -k/-c, -B, or -g")
+                parser.error(auth_method_error)
             options.key_file = options.cert_file
         if not options.cert_file:
             options.cert_file = options.key_file

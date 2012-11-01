@@ -23,30 +23,46 @@ for password. The cookie is printed to stdout.
 import sys
 import urlparse
 import getpass
-from Cookie import BaseCookie
 from collections import namedtuple
 import json
+import base64
 
 from globusonline.transfer.api_client.verified_https \
     import VerifiedHTTPSConnection
 
 HOST = "nexus.api.globusonline.org"
-PATH = "/authenticate"
+GOAUTH_PATH = "/goauth/token?grant_type=client_credentials"
 PORT = 443
 
-GOCookieResult = namedtuple("GOCookieResult", "username password cookie")
+GOAuthResult = namedtuple("GOAuthResult", "username password token")
 
 
-def get_go_cookie(ca_certs, username=None, password=None):
-    """
-    POST the login form to www.globusonline.org to get the cookie,
-    prompting for username and password on stdin if they were not
-    passed as parameters.
+class GOAuthError(Exception):
+    pass
 
-    @return: a GOCookieResult instance. The cookie is what most clients will
-             be interested in, but if the username is not passed as a
-             parameter the caller may need that as well, and may want
-             to cache the password.
+
+class GOCredentialsError(GOAuthError):
+    def __init__(self):
+        GOAuthError.__init__(self, "Wrong username or password")
+
+
+def get_access_token(username=None, password=None, ca_certs=None):
+    """Get a goauth access token from nexus.
+
+    Uses basic auth with the user's username and password to authenticate
+    to nexus. If the username or password are not passed, they are prompted
+    for on stdin.
+
+    @param username: Globus Online username to authenticate as, or None
+                     to prompt on stdin.
+    @param password: Globus Online password to authenticate with, or None
+                     to prompt on stdin (with echo disabled for security).
+    @param ca_certs: Path to a ca certificate to verify nexus, or None
+                     to use the default CA included in the package.
+
+    @return: GOAuthResult object. Most applications will only care about the
+             token field, but username/password may be useful for caching
+             authentication information when using the prompt.
     """
     if ca_certs is None:
         from globusonline.transfer.api_client import get_ca
@@ -58,25 +74,25 @@ def get_go_cookie(ca_certs, username=None, password=None):
     if password is None:
         password = getpass.getpass("GO Password: ")
 
+    basic_auth = base64.b64encode("%s:%s" % (username, password))
     headers = { "Content-type": "application/json; charset=UTF-8",
                 "Hostname": HOST,
-                "Accept": "application/json; charset=UTF-8" }
+                "Accept": "application/json; charset=UTF-8",
+                "Authorization": "Basic %s" % basic_auth }
     c = VerifiedHTTPSConnection(HOST, PORT, ca_certs=ca_certs)
-    body = json.dumps(dict(username=username,
-                           password=password))
-    c.request("POST", PATH, body=body, headers=headers)
+    c.request("GET", GOAUTH_PATH, headers=headers)
     response = c.getresponse()
-    set_cookie_header = response.getheader("set-cookie")
-    if not set_cookie_header:
-        # TODO: more appropriate exc type
-        raise ValueError("No cookies received")
+    if response.status == 403:
+        raise GOCredentialsError()
+    elif response.status > 299 or response.status < 200:
+        raise GOAuthError("error response: %d %s"
+                         % (response.status, response.reason))
+    data = json.loads(response.read())
+    token = data.get("access_token")
+    if token is None:
+        raise GOAuthError("no token in response")
 
-    cookies = BaseCookie(set_cookie_header)
-    morsel = cookies.get("saml")
-    if not morsel:
-        raise ValueError("No saml cookie received")
-
-    return GOCookieResult(username, password, morsel.coded_value)
+    return GOAuthResult(username, password, token)
 
 
 def _get_host_port(url):
@@ -119,9 +135,9 @@ if __name__ == '__main__':
         username = None
 
     try:
-        result = get_go_cookie(ca_certs=options.server_ca_file,
-                               username=username)
-        print result.cookie
+        result = get_access_token(ca_certs=options.server_ca_file,
+                                  username=username)
+        print result.token
     except Exception as e:
         sys.stderr.write(str(e) + "\n")
         sys.exit(2)
