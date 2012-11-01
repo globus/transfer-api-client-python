@@ -558,18 +558,22 @@ class TransferAPIClient(object):
 
     def endpoint_create(self, endpoint_name, hostname=None, description="",
                         scheme="gsiftp", port=2811, subject=None,
-                        myproxy_server=None, public=False,
-                        is_globus_connect=False):
+                        myproxy_server=None, myproxy_dn=None,
+                        public=False, is_globus_connect=False,
+                        default_directory=None, oauth_server=None):
         """
         @return: (status_code, status_reason, data)
         @raise TransferAPIError
         """
         data = { "DATA_TYPE": "endpoint",
                  "myproxy_server": myproxy_server,
+                 "myproxy_dn": myproxy_dn,
                  "description": description,
                  "canonical_name": endpoint_name,
                  "public": public,
-                 "is_globus_connect": is_globus_connect, }
+                 "is_globus_connect": is_globus_connect,
+                 "default_directory": default_directory,
+                 "oauth_server": oauth_server, }
         if not is_globus_connect:
             data["DATA"] = [dict(DATA_TYPE="server",
                                  hostname=hostname,
