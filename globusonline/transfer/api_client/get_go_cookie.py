@@ -21,9 +21,7 @@ for password. The cookie is printed to stdout.
 """
 
 import sys
-import httplib
 import urlparse
-import urllib
 import getpass
 from Cookie import BaseCookie
 from collections import namedtuple
@@ -32,19 +30,20 @@ import json
 from globusonline.transfer.api_client.verified_https \
     import VerifiedHTTPSConnection
 
-HOST = "www.globusonline.org"
-PATH = "/service/graph/authenticate"
+HOST = "nexus.api.globusonline.org"
+PATH = "/authenticate"
 PORT = 443
 
-GOAuthResult = namedtuple("GOAuthResult", "username password cookie")
+GOCookieResult = namedtuple("GOCookieResult", "username password cookie")
 
-def get_go_auth(ca_certs, username=None, password=None):
+
+def get_go_cookie(ca_certs, username=None, password=None):
     """
     POST the login form to www.globusonline.org to get the cookie,
     prompting for username and password on stdin if they were not
     passed as parameters.
 
-    @return: a GOAuthResult instance. The cookie is what most clients will
+    @return: a GOCookieResult instance. The cookie is what most clients will
              be interested in, but if the username is not passed as a
              parameter the caller may need that as well, and may want
              to cache the password.
@@ -77,7 +76,8 @@ def get_go_auth(ca_certs, username=None, password=None):
     if not morsel:
         raise ValueError("No saml cookie received")
 
-    return GOAuthResult(username, password, morsel.coded_value)
+    return GOCookieResult(username, password, morsel.coded_value)
+
 
 def _get_host_port(url):
     o = urlparse(url)
@@ -92,6 +92,7 @@ def _get_host_port(url):
         else:
             port = 80
     return (host, port)
+
 
 def process_args(args=None, parser=None):
     from optparse import OptionParser
@@ -118,8 +119,8 @@ if __name__ == '__main__':
         username = None
 
     try:
-        result = get_go_auth(ca_certs=options.server_ca_file,
-                             username=username)
+        result = get_go_cookie(ca_certs=options.server_ca_file,
+                               username=username)
         print result.cookie
     except Exception as e:
         sys.stderr.write(str(e) + "\n")

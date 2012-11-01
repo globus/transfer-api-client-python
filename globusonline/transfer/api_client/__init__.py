@@ -49,7 +49,7 @@ from datetime import datetime, timedelta
 
 from globusonline.transfer.api_client.verified_https \
     import VerifiedHTTPSConnection
-from globusonline.transfer.api_client.get_go_cookie import get_go_auth
+from globusonline.transfer.api_client.get_go_cookie import get_go_cookie
 
 API_VERSION = "v0.10"
 DEFAULT_BASE_URL = "https://transfer.api.globusonline.org/" + API_VERSION
@@ -60,14 +60,16 @@ HOST_CA_MAP = {
     "transfer.qa.api.globusonline.org": "ca/godaddy-ca.pem",
     "transfer.test.api.globusonline.org": "ca/globusconnect-ca.pem",
     "www.globusonline.org": "ca/godaddy-ca.pem",
+    "nexus.api.globusonline.org": "ca/godaddy-ca.pem",
 }
 
-__all__ = ["TransferAPIClient","TransferAPIError", "InterfaceError",
+__all__ = ["TransferAPIClient", "TransferAPIError", "InterfaceError",
            "APIError", "ClientError", "ServerError", "ExternalError",
            "ServiceUnavailable", "Transfer", "Delete"]
 
 # client version
 __version__ = "0.10.13"
+
 
 class TransferAPIClient(object):
     """
@@ -87,11 +89,11 @@ class TransferAPIClient(object):
     """
 
     def __init__(self, username, server_ca_file=None,
-                 cert_file=None, key_file=None, saml_cookie=None,
+                 cert_file=None, key_file=None,
                  base_url=DEFAULT_BASE_URL,
                  timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
                  httplib_debuglevel=0, max_attempts=1,
-                 header_auth=None):
+                 header_auth=None, goauth=None):
         """
         Initialize a client with the client credential and optional alternate
         base URL.
@@ -114,10 +116,9 @@ class TransferAPIClient(object):
         @param key_file: path to file containg the RSA key for client
                          authentication. If blank and cert_file passed,
                          uses cert_file.
-        @param saml_cookie: contents of 'saml' cookie from
-                            www.globusonline.org.
         @param header_auth: contents of the saml cookie, but used for header
                             authentication, not cookie auth.
+        @param goauth: goauth token retrieved from nexus.
         @param base_url: optionally specify an alternate base url, if testing
                          out an unreleased or alternatively hosted version of
                          the API.
@@ -140,10 +141,10 @@ class TransferAPIClient(object):
             raise InterfaceError("server_ca_file not found: '%s'"
                                  % server_ca_file)
 
-        if header_auth and (saml_cookie or (cert_file or key_file)):
+        if header_auth and (goauth or (cert_file or key_file)):
                 raise InterfaceError("pass only one auth method")
 
-        if saml_cookie and (cert_file or key_file):
+        if goauth and (cert_file or key_file):
                 raise InterfaceError("pass either cookie or cert/key"
                                      " files, not both.")
         if cert_file or key_file:
@@ -155,6 +156,9 @@ class TransferAPIClient(object):
                 raise InterfaceError("cert_file not found: %s" % cert_file)
             if not os.path.isfile(key_file):
                 raise InterfaceError("key_file not found: %s" % key_file)
+            self.headers = { "X-Transfer-API-X509-User": username }
+        else:
+            self.headers = {}
 
         if max_attempts is not None:
             max_attempts = int(max_attempts)
@@ -163,7 +167,7 @@ class TransferAPIClient(object):
                     "max_attempts must be None or a positive integer")
         self.max_attempts = max_attempts
 
-        self.saml_cookie = saml_cookie
+        self.goauth = goauth
         self.cert_file = cert_file
         self.key_file = key_file
         self.header_auth = header_auth
@@ -175,15 +179,6 @@ class TransferAPIClient(object):
         self.base_url = base_url
         self.host, self.port = _get_host_port(base_url)
         self.timeout = timeout
-
-        if saml_cookie:
-            unquoted = urllib.unquote(saml_cookie)
-            if unquoted.find("un=%s|" % username) == -1:
-                raise InterfaceError("saml cookie username does not match "
-                                     "username argument")
-            self.headers = {}
-        else:
-            self.headers = { "X-Transfer-API-X509-User": username }
 
         self.print_request = False
         self.print_response = False
@@ -210,7 +205,7 @@ class TransferAPIClient(object):
     def set_http_connection_debug(self, value):
         """
         Turn debugging of the underlying VerifiedHTTPSConnection on or
-        off. Note: this may print sensative information, like saml cookie,
+        off. Note: this may print sensative information, like auth tokens,
         to standard out.
         """
         if value:
@@ -246,18 +241,14 @@ class TransferAPIClient(object):
             print
             print ">>>REQUEST>>>:"
             print "%s %s" % (method, url)
-            if self.saml_cookie:
-                # Should be enough to show the username and still hide the
-                # signature.
-                headers["Cookie"] = "saml=%s..." % self.saml_cookie[:31]
             for h in headers.iteritems():
                 print "%s: %s" % h
             print
             if body:
                 print body
 
-        if self.saml_cookie:
-            headers["Cookie"] = "saml=%s" % self.saml_cookie
+        if self.goauth:
+            headers["Authorization"] = "Globus-Goauthtoken %s" % self.goauth
         elif self.header_auth:
             headers["Authorization"] = "Bearer %s" % self.header_auth
 
@@ -401,7 +392,7 @@ class TransferAPIClient(object):
         """
         return self.get("/task/%s" % task_id + encode_qs(kw))
 
-    def task_update(self, task_id, task_data):
+    def task_update(self, task_id, task_data, **kw):
         """
         @return: (status_code, status_reason, data)
         @raise TransferAPIError
@@ -567,14 +558,12 @@ class TransferAPIClient(object):
         @return: (status_code, status_reason, data)
         @raise TransferAPIError
         """
-        data = {
-                 "DATA_TYPE": "endpoint",
+        data = { "DATA_TYPE": "endpoint",
                  "myproxy_server": myproxy_server,
                  "description": description,
                  "canonical_name": endpoint_name,
                  "public": public,
-                 "is_globus_connect": is_globus_connect,
-               }
+                 "is_globus_connect": is_globus_connect, }
         if not is_globus_connect:
             data["DATA"] = [dict(DATA_TYPE="server",
                                  hostname=hostname,
@@ -774,7 +763,7 @@ class ActivationRequirementList(object):
             name = r["name"]
             if type_ not in self.types:
                 self.types.append(type_)
-            key = r["type"] + "." + r["name"]
+            key = type_ + "." + name
             self.req_list.append(r)
             self.index_map[key] = len(self.req_list) - 1
 
@@ -869,11 +858,13 @@ class TransferAPIError(Exception):
     """
     pass
 
+
 class InterfaceError(TransferAPIError):
     """
     Error generated by the python interface.
     """
     pass
+
 
 class APIError(TransferAPIError):
     """
@@ -888,7 +879,8 @@ class APIError(TransferAPIError):
         according to the category in the error_code.
         """
         if status_code >= 200 and status_code < 400:
-            raise InterfaceError("status code %d is not an error" % status_code)
+            raise InterfaceError("status code %d is not an error"
+                                 % status_code)
 
         # The error_code is a dot delimited list of error specifiers,
         # with the error category first, and more specific error details
@@ -910,7 +902,7 @@ class APIError(TransferAPIError):
             return super(APIError, ServiceUnavailable).__new__(
                         ServiceUnavailable,
                         error_code, status_code, status_message, error_data)
-        else: # category == "ServerError"
+        else:  # category == "ServerError"
             return super(APIError, ServerError).__new__(ServerError,
                         error_code, status_code, status_message, error_data)
 
@@ -950,11 +942,13 @@ class ClientError(APIError):
     """
     pass
 
+
 class ServerError(APIError):
     """
     Used for 500 error only. Indicates bug in the server.
     """
     pass
+
 
 class ExternalError(APIError):
     """
@@ -963,6 +957,7 @@ class ExternalError(APIError):
     endpoints and myproxy servers.
     """
     pass
+
 
 class ServiceUnavailable(APIError):
     """
@@ -1041,9 +1036,6 @@ def process_args(args=None, parser=None):
                       help="client cert file", metavar="CERT_FILE")
     parser.add_option("-k", "--key", dest="key_file",
                       help="client key file", metavar="KEY_FILE")
-    parser.add_option("-s", "--saml-cookie", dest="saml_cookie",
-                      help="alternate authentication method",
-                      metavar="COOKIE_DATA")
     parser.add_option("-p", "--password-prompt", dest="password_prompt",
                       action="store_true", default=False,
                       help="prompt for GO password for authentication")
@@ -1058,6 +1050,9 @@ def process_args(args=None, parser=None):
     parser.add_option("-B", "--bearer", dest="header_auth",
                       help="Use header-based authentication",
                       metavar="BEARER", type="str")
+    parser.add_option("-g", "--goauth", dest="goauth",
+                      help="Use goauth authentication",
+                      metavar="TOKEN", type="str")
     parser.set_defaults(base_url=DEFAULT_BASE_URL,
                         max_attempts=1,
                         timeout=socket._GLOBAL_DEFAULT_TIMEOUT)
@@ -1067,44 +1062,44 @@ def process_args(args=None, parser=None):
         parser.error("username arguments is required")
 
     if options.password_prompt:
-        if (options.saml_cookie or options.header_auth
-            or options.key_file or options.cert_file):
+        if (options.goauth or options.header_auth
+        or options.key_file or options.cert_file):
             parser.error(
-                "use only one authentication method: -p, -k/-c, -B, or -s")
+                "use only one authentication method: -p, -k/-c, -B, or -g")
         username = args[0]
         success = False
         for i in xrange(5):
             try:
-                result = get_go_auth(ca_certs=options.server_ca_file,
-                                     username=username)
+                result = get_go_cookie(ca_certs=options.server_ca_file,
+                                       username=username)
                 args[0] = result.username
                 options.header_auth = result.cookie
                 success = True
                 break
-            except InterfaceError as e:
+            except InterfaceError:
                 sys.stderr.write("authentication to GO failed")
                 if i < 4:
-                     sys.stderr.write(", please try again")
+                    sys.stderr.write(", please try again")
                 sys.stderr.write("\n")
                 username = None
         if not success:
             sys.stderr.write("too many failed attempts, exiting\n")
             sys.exit(2)
     elif options.header_auth:
-        if options.key_file or options.cert_file or options.saml_cookie:
+        if options.key_file or options.cert_file or options.goauth:
             parser.error("use only one authentication method: -p, -k/-c, "
-                         "-B, or -s")
-    elif options.saml_cookie:
+                         "-B, or -g")
+    elif options.goauth:
         if options.key_file or options.cert_file:
             parser.error("use only one authentication method: -p, -k/-c, "
-                         "-B, or -s")
+                         "-B, or -g")
     else:
         # If only one of -k/-c is specified, assume both the key and cert are
         # in the same file.
         if not options.key_file:
             if not options.cert_file:
                 parser.error(
-                    "specify one authentication method: -p, -k/-c, -B, or -s")
+                    "specify one authentication method: -p, -k/-c, -B, or -g")
             options.key_file = options.cert_file
         if not options.cert_file:
             options.cert_file = options.key_file
@@ -1125,9 +1120,9 @@ def create_client_from_args(args=None):
     api = TransferAPIClient(args[0], server_ca_file=options.server_ca_file,
                             cert_file=options.cert_file,
                             key_file=options.key_file,
-                            saml_cookie=options.saml_cookie,
                             base_url=options.base_url,
                             header_auth=options.header_auth,
+                            goauth=options.goauth,
                             timeout=options.timeout,
                             max_attempts=options.max_attempts)
     return api, args[1:]
