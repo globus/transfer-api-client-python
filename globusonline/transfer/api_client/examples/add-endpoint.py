@@ -14,8 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Authenticate using Username/Password prompt and goauth, then add an
-endpoint to the users' account.
+Add an endpoint to the user's account. Prompts for username and password to
+authenticate.
+
+Example usage:
+
+    add-endpoint.py myep \
+      --hostname=myep.mydomain.example.net \
+      --myproxy-server=myproxy.mydomain.example.net \
+      --public
+
+Hostname is required unless --is-globus-connect is passed to create a
+GC endpoint.
+
+For a full list of options, run with -h.
 """
 import sys
 import inspect
