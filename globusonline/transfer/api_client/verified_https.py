@@ -16,7 +16,8 @@ As of Python 2.6, httlib doesn't validate the server certificate.
 However the ssl module does support validation, so it's fairly easy to
 extend the stardant classes to support validation.
 
-match_hostname is from Python 3.2.
+match_hostname is from Python 3.2, with a small modification to support
+GT style hostcerts (host/ prefix in the DN).
 
 See http://www.muchtooscrawled.com/2010/03/https-certificate-verification-in-python-with-urllib2/
 """
@@ -101,6 +102,9 @@ class VerifiedHTTPSConnection(HTTPSConnection):
 
 def _dnsname_to_pat(dn):
     pats = []
+    # add support for non-standard GT names with host/ prefix
+    if dn.startswith("host/"):
+        dn = dn[len("host/"):]
     for frag in dn.split(r'.'):
         if frag == '*':
             # When '*' is a fragment by itself, it matches a non-empty dotless
