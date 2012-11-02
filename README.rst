@@ -53,11 +53,20 @@ shortcut for doing this:
     >>> dir(api) # get a list of all available methods
 
 replace USERNAME with your Globus Online username, and you will be
-prompted for your password. This form of authentication should not be
-used in production systems, but is useful for development and testing.
+prompted for your password.
 
 Changlog
 ========
+
+0.10.13
+-------
+
+- Add goauth authentication and remove cookie authentication. Password
+  prompt now uses goauth instead of scraping a cookie from the website.
+- Add hostname validation to verified_https module.
+- Add missing options to endpoint_create.
+- Add example add-endpoint.py that prompts for username and password and
+  uses goauth to authenticate.
 
 0.10.12
 -------
