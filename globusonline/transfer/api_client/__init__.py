@@ -270,7 +270,6 @@ class TransferAPIClient(object):
             return r, response_body
 
         for attempt in xrange(self.max_attempts):
-            #print "attempt:", attempt
             r = None
             try:
                 try:
@@ -290,13 +289,11 @@ class TransferAPIClient(object):
             except ssl.SSLError:
                 # This probably has to do with failed authentication, so
                 # retrying is not useful.
-                traceback.print_exc()
                 self.close()
                 raise
             except socket.error:
                 # Network error. If the last attempt failed, raise,
                 # otherwise do nothing and go on to next attempt.
-                traceback.print_exc()
                 self.close()
                 if attempt == self.max_attempts - 1:
                     raise
