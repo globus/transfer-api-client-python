@@ -68,11 +68,11 @@ def get_access_token(username=None, password=None, ca_certs=None):
         from globusonline.transfer.api_client import get_ca
         ca_certs = get_ca(HOST)
     if username is None:
-        print "GO Username: ",
+        print "Globus Online Username: ",
         sys.stdout.flush()
         username = sys.stdin.readline().strip()
     if password is None:
-        password = getpass.getpass("GO Password: ")
+        password = getpass.getpass("Globus Online Password: ")
 
     basic_auth = base64.b64encode("%s:%s" % (username, password))
     headers = { "Content-type": "application/json; charset=UTF-8",
