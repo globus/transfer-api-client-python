@@ -58,6 +58,12 @@ prompted for your password.
 Changlog
 ========
 
+0.10.14
+-------
+
+- Handle 503 errors within retry loop.
+- Replace GO abbreviation in prompts with Globus Online.
+
 0.10.13
 -------
 
