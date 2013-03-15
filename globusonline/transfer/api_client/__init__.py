@@ -68,7 +68,7 @@ __all__ = ["TransferAPIClient", "TransferAPIError", "InterfaceError",
            "ServiceUnavailable", "Transfer", "Delete"]
 
 # client version
-__version__ = "0.10.13"
+__version__ = "0.10.14"
 
 
 class TransferAPIClient(object):
@@ -298,15 +298,15 @@ class TransferAPIClient(object):
                 if attempt == self.max_attempts - 1:
                     raise
 
-            # Check for ServiceUnavailable, which is treated just like
+            # Check for 503 ServiceUnavailable, which is treated just like
             # network errors.
-            if r is not None and attempt < self.max_attempts - 1:
-                error_code = r.getheader("X-Transfer-API-Error", None)
-                if error_code is not None \
-                and error_code.startswith("ServiceUnavailable"):
-                    # Force sleep below and continue loop
-                    self.close()
-                    r = None
+            if (r is not None and r.status == 503
+            and attempt < self.max_attempts - 1):
+                # Force sleep below and continue loop, unless we are on
+                # the last attempt in which case skip this and return
+                # the 503 error.
+                self.close()
+                r = None
 
             if r is not None:
                 break
@@ -334,8 +334,10 @@ class TransferAPIClient(object):
             try:
                 data = json.loads(response_body)
             except Exception as e:
-                raise InterfaceError("Unable to parse JSON in response: "
-                                     + str(e))
+                raise InterfaceError(
+                    ("Unable to parse JSON in response: err='%s', "
+                     +"body len='%d', status='%d %s'")
+                    % (e, len(response_body), r.status, r.reason))
         else:
             data = None
         return api_result(r, data)
