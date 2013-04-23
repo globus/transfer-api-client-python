@@ -32,3 +32,10 @@ executable is in place, it will be used instead of M2Crypto. This can be
 verified by checking that
 ``globusonline.transfer.api_client.x509_proxy.implementation`` is
 "mkproxy" instead of "m2".
+
+Java Client Notes
+=================
+
+If using mkproxy with the Java client, just build it with ``make`` and copy it
+to a fixed location that can be passed to the Java application (e.g.
+``/usr/local/bin/mkproxy``).
