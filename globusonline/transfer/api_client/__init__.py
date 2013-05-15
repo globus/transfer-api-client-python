@@ -55,13 +55,7 @@ API_VERSION = "v0.10"
 DEFAULT_BASE_URL = "https://transfer.api.globusonline.org/" + API_VERSION
 RETRY_WAIT_SECONDS=30
 
-HOST_CA_MAP = {
-    "transfer.api.globusonline.org": "ca/godaddy-ca.pem",
-    "transfer.qa.api.globusonline.org": "ca/godaddy-ca.pem",
-    "transfer.test.api.globusonline.org": "ca/globusconnect-ca.pem",
-    "www.globusonline.org": "ca/godaddy-ca.pem",
-    "nexus.api.globusonline.org": "ca/godaddy-ca.pem",
-}
+CA_FILE = "ca/all-ca.pem"
 
 __all__ = ["TransferAPIClient", "TransferAPIError", "InterfaceError",
            "APIError", "ClientError", "ServerError", "ExternalError",
@@ -1013,21 +1007,14 @@ def encode_qs(kwargs=None, **kw):
 
 
 def get_ca(base_url_or_hostname):
-    if base_url_or_hostname.startswith("https://"):
-        url_parts = urlparse(base_url_or_hostname)
-        netloc_parts = url_parts.netloc.split(":", 1)
-        hostname = netloc_parts[0]
-    else:
-        hostname = base_url_or_hostname
-    path = HOST_CA_MAP.get(hostname)
-    if path is None:
-        return None
+    # Note: use the same CA file for all servers. This is simpler and
+    # facilitates the transition from GoDaddy to InCommon for the api servers.
     try:
         import pkg_resources
-        path = pkg_resources.resource_filename(__name__, path)
+        path = pkg_resources.resource_filename(__name__, CA_FILE)
     except ImportError:
         pkg_path = os.path.dirname(__file__)
-        path = os.path.join(pkg_path, path)
+        path = os.path.join(pkg_path, CA_FILE)
     return path
 
 
