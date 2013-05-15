@@ -337,7 +337,7 @@ class TransferAPIClient(object):
             data = None
             parts = response_content_type.split(';')
             if parts[0].strip() == "text/html":
-		data = response_body
+                data = response_body
         return api_result(r, data)
 
     # Generic API methods:
