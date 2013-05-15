@@ -58,6 +58,11 @@ prompted for your password.
 Changlog
 ========
 
+0.10.15
+-------
+
+- Add InCommon CA and simplify CA handling.
+
 0.10.14
 -------
 
