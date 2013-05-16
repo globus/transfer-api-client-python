@@ -42,7 +42,6 @@ import json
 import urllib
 import time
 import ssl
-import traceback
 from urlparse import urlparse
 from httplib import BadStatusLine
 from datetime import datetime, timedelta
@@ -324,7 +323,9 @@ class TransferAPIClient(object):
         is not empty.
         """
         r, response_body = self._request(method, path, body, content_type)
-        if response_body:
+        response_content_type = r.getheader("content-type")
+        assert response_content_type == "application/json" or r.status != 200
+        if response_body and response_content_type == "application/json":
             try:
                 data = json.loads(response_body)
             except Exception as e:
@@ -334,6 +335,9 @@ class TransferAPIClient(object):
                     % (e, len(response_body), r.status, r.reason))
         else:
             data = None
+            parts = response_content_type.split(';')
+            if parts[0].strip() == "text/html":
+                data = response_body
         return api_result(r, data)
 
     # Generic API methods:
@@ -885,6 +889,12 @@ class APIError(TransferAPIError):
             raise InterfaceError("status code %d is not an error"
                                  % status_code)
 
+        # error_code not set means the request never made it all the way to the 
+        # go application.
+        if not error_code and status_code >= 400 and status_code < 500:
+            return super(APIError, ClientError).__new__(ClientError,
+                       error_code, status_code, status_message, error_data)
+
         # The error_code is a dot delimited list of error specifiers,
         # with the error category first, and more specific error details
         # further to the right. If we are unable to get the error code
@@ -913,19 +923,18 @@ class APIError(TransferAPIError):
         self.status_code = status_code
         self.status_message = status_message
         self.code = error_code
-        if error_data:
-            self.read_error_data(error_data)
-        else:
-            self.resource = None
-            self._message = status_message
-            self.request_id = None
+        # error_data not set unless reply is from the api itself
+        self.read_error_data(error_code, error_data)
 
         Exception.__init__(self, status_message)
 
-    def read_error_data(self, error_data):
-        self.resource = error_data["resource"]
-        self._message = error_data["message"]
-        self.request_id = error_data["request_id"]
+    def read_error_data(self, error_code, error_data):
+        if error_code:
+            self.resource = error_data["resource"]
+            self._message = error_data["message"]
+            self.request_id = error_data["request_id"]
+        else:
+            self._message = error_data
 
     @property
     def message(self):
