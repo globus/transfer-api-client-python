@@ -62,6 +62,7 @@ Changlog
 -------
 
 - Add InCommon CA and simplify CA handling.
+- Improve handling of HTML errors.
 
 0.10.14
 -------
