@@ -58,6 +58,11 @@ prompted for your password.
 Changlog
 ========
 
+0.10.16
+-------
+
+- Add methods for new server API.
+
 0.10.15
 -------
 

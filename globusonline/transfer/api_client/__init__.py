@@ -61,7 +61,7 @@ __all__ = ["TransferAPIClient", "TransferAPIError", "InterfaceError",
            "ServiceUnavailable", "Transfer", "Delete"]
 
 # client version
-__version__ = "0.10.14"
+__version__ = "0.10.16a1"
 
 
 class TransferAPIClient(object):
@@ -607,6 +607,22 @@ class TransferAPIClient(object):
         @raise TransferAPIError
         """
         return self._delete(_endpoint_path(endpoint_name))
+
+    def endpoint_server_list(self, endpoint_name, **kw):
+        return self.get(_endpoint_path(endpoint_name, "/server_list")
+                        + encode_qs(kw))
+
+    def endpoint_server(self, endpoint_name, server_id, **kw):
+        return self.get(_endpoint_path(endpoint_name, "/server/")
+                        + urllib.quote(str(server_id)) + encode_qs(kw))
+
+    def endpoint_server_delete(self, endpoint_name, server_id, **kw):
+        return self._delete(_endpoint_path(endpoint_name, "/server/")
+                            + urllib.quote(str(server_id)) + encode_qs(kw))
+
+    def endpoint_server_add(self, endpoint_name, server_data):
+        return self.post(_endpoint_path(endpoint_name, "/server"),
+                         json.dumps(server_data))
 
     def submission_id(self):
         """
