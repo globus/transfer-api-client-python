@@ -55,8 +55,8 @@ shortcut for doing this:
 replace USERNAME with your Globus Online username, and you will be
 prompted for your password.
 
-Changlog
-========
+Changelog
+=========
 
 0.10.16
 -------
