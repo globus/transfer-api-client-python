@@ -410,8 +410,25 @@ class TransferAPIClient(object):
         return self.post("/task/%s/cancel" % task_id + encode_qs(kw),
                          body=None)
 
+    def task_successful_transfers(self, task_id, **kw):
+        """
+        Get a list of source and destination paths for files successful
+        transferred in a transfer task. Raises an error if task_id is not
+        a transfer task.
+
+        @param marker: start from specified marker, copied from the
+                       next_marker field of the previous page
+
+        @return: (status_code, status_reason, data)
+        @raise TransferAPIError
+        """
+        return self.get("/task/%s/successful_transfers" % task_id
+                        + encode_qs(kw))
+
     def subtask_list(self, parent_task_id, **kw):
         """
+        DEPRECATED, see task_successful_transfers
+
         @return: (status_code, status_reason, data)
         @raise TransferAPIError
         """
@@ -420,6 +437,8 @@ class TransferAPIClient(object):
 
     def subtask(self, task_id, **kw):
         """
+        DEPRECATED, see task_successful_transfers
+
         @return: (status_code, status_reason, data)
         @raise TransferAPIError
         """
@@ -434,6 +453,8 @@ class TransferAPIClient(object):
 
     def subtask_event_list(self, task_id, **kw):
         """
+        DEPRECATED, see task_successful_transfers
+
         @return: (status_code, status_reason, data)
         @raise TransferAPIError
         """
@@ -582,8 +603,9 @@ class TransferAPIClient(object):
 
     def endpoint_update(self, endpoint_name, endpoint_data):
         """
-        Call endpoint to get the data, modify as needed, then pass the
-        modified data to this method.
+        Update top level endpoint fields. Using this method to add or remove
+        server is deprecated, use endpoint_server_add and
+        endpoint_server_delete instead.
 
         @return: (status_code, status_reason, data)
         @raise TransferAPIError
@@ -623,6 +645,32 @@ class TransferAPIClient(object):
     def endpoint_server_add(self, endpoint_name, server_data):
         return self.post(_endpoint_path(endpoint_name, "/server"),
                          json.dumps(server_data))
+
+    def shared_endpoint_create(self, endpoint_name, host_endpoint,
+                               host_path):
+        """
+        [ALPHA] This API is alpha and may change between minor server releases.
+        It is provided for testing and development only.
+
+        Create a shared endpoint on the specified host. Raises an error if
+        the host endpoint does not support sharing, if the user is not licensed
+        to use sharing, or if the specified path is not allowed for sharing.
+
+        @param endpoint_name: name of the new shared endpoint to create
+        @param host_endpoint: endpoint that hosts the actual data for the
+          shared endpoint. Must be running a newer GridFTP server with sharing
+          enabled.
+        @param host_path: a path on the host_endpoint to use as the root of
+          the new shared endpoint.
+
+        @return: (status_code, status_reason, data)
+        @raise TransferAPIError
+        """
+        data = { "DATA_TYPE": "shared_endpoint",
+                 "name": endpoint_name,
+                 "host_endpoint": host_endpoint,
+                 "host_path": host_path, }
+        return self.post("/shared_endpoint", json.dumps(data))
 
     def submission_id(self):
         """

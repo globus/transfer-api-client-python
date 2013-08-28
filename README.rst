@@ -61,6 +61,8 @@ Changelog
 0.10.16
 -------
 
+- Add method for creating shared endpoints.
+- Add method for successful transfers API to replace subtask API.
 - Add methods for new server API.
 
 0.10.15
