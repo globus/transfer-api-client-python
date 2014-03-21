@@ -129,9 +129,10 @@ def display_task(task_id, show_successful_transfers=True):
     if show_successful_transfers:
         code, reason, data = api.task_successful_transfers(task_id)
         transfer_list = data["DATA"]
+        print "Successful Transfers (src -> dst)"
         for t in transfer_list:
-            print "Source %s Destination %s" % (t[u'source_path'],
-                                                t[u'destination_path'])
+            print " %s -> %s" % (t[u'source_path'],
+                                 t[u'destination_path'])
 
 def wait_for_task(task_id, timeout=120):
     status = "ACTIVE"
