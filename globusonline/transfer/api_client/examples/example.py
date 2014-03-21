@@ -22,7 +22,6 @@ python example.py USERNAME -k ~/.globus/userkey.pem -c ~/.globus/usercert.pem
 """
 import time
 from datetime import datetime, timedelta
-#import traceback
 
 from globusonline.transfer.api_client import Transfer, create_client_from_args
 
@@ -115,10 +114,6 @@ def display_task_list(max_age=None):
         _print_task(task)
 
 def _print_task(data, indent_level=0):
-    """
-    Works for tasks and subtasks, since both have a task_id key
-    and other key/values are printed by iterating through the items.
-    """
     indent = " " * indent_level
     indent += " " * 2
     for k, v in data.iteritems():
@@ -126,18 +121,17 @@ def _print_task(data, indent_level=0):
             continue
         print indent + "%s: %s" % (k, v)
 
-def display_task(task_id, show_subtasks=True):
+def display_task(task_id, show_successful_transfers=True):
     code, reason, data = api.task(task_id)
     print "Task %s:" % task_id
     _print_task(data, 0)
 
-    if show_subtasks:
+    if show_successful_transfers:
         code, reason, data = api.task_successful_transfers(task_id)
-        subtask_list = data["DATA"]
-        for t in subtask_list:
-            print "Status %s Source %s Destination %s" % (t[u'DATA_TYPE'],
-                                                         t[u'source_path'],
-                                                         t[u'destination_path'])
+        transfer_list = data["DATA"]
+        for t in transfer_list:
+            print "Source %s Destination %s" % (t[u'source_path'],
+                                                t[u'destination_path'])
 
 def wait_for_task(task_id, timeout=120):
     status = "ACTIVE"
