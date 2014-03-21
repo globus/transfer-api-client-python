@@ -22,7 +22,7 @@ python example.py USERNAME -k ~/.globus/userkey.pem -c ~/.globus/usercert.pem
 """
 import time
 from datetime import datetime, timedelta
-import traceback
+#import traceback
 
 from globusonline.transfer.api_client import Transfer, create_client_from_args
 
@@ -62,7 +62,7 @@ def tutorial():
     # see the new transfer show up
     print "=== After submit ==="
     display_tasksummary(); print
-    display_task(task_id); print
+    display_task(task_id, False); print
 
     # wait for the task to complete, and see the summary and lists
     # update
@@ -132,11 +132,12 @@ def display_task(task_id, show_subtasks=True):
     _print_task(data, 0)
 
     if show_subtasks:
-        code, reason, data = api.subtask_list(task_id)
+        code, reason, data = api.task_successful_transfers(task_id)
         subtask_list = data["DATA"]
         for t in subtask_list:
-            print "  subtask %s:" % t["task_id"]
-            _print_task(t, 4)
+            print "Status %s Source %s Destination %s" % (t[u'DATA_TYPE'],
+                                                         t[u'source_path'],
+                                                         t[u'destination_path'])
 
 def wait_for_task(task_id, timeout=120):
     status = "ACTIVE"
