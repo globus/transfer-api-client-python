@@ -25,8 +25,10 @@ from datetime import datetime, timedelta
 
 from globusonline.transfer.api_client import Transfer, create_client_from_args
 
+
 # TransferAPIClient instance.
 api = None
+
 
 def tutorial():
     """
@@ -63,9 +65,20 @@ def tutorial():
     display_tasksummary(); print
     display_task(task_id, False); print
 
-    # wait for the task to complete, and see the summary and lists
-    # update
-    if wait_for_task(task_id):
+    # wait for the task to complete, and see the tasks and
+    # endpoint ls change
+    status = wait_for_task(task_id)
+
+    if status is None:
+        # Task didn't complete before the timeout.
+        # Since the example transfers a single small file and the
+        # timeout is 2 mintues, this shouldn't happen unless one of the
+        # endpoints is having problems or the user already has a bunch
+        # of other active tasks (there is a limit to the
+        # number of concurrent active tasks a user can have).
+        print "WARNING: task did not complete before timeout!"
+    else:
+        print "Task %s complete with status %s" % (task_id, status)
         print "=== After completion ==="
         display_tasksummary(); print
         display_task(task_id); print
@@ -113,6 +126,7 @@ def display_task_list(max_age=None):
         print "Task %s:" % task["task_id"]
         _print_task(task)
 
+
 def _print_task(data, indent_level=0):
     indent = " " * indent_level
     indent += " " * 2
@@ -120,6 +134,7 @@ def _print_task(data, indent_level=0):
         if k in ("DATA_TYPE", "LINKS"):
             continue
         print indent + "%s: %s" % (k, v)
+
 
 def display_task(task_id, show_successful_transfers=True):
     code, reason, data = api.task(task_id)
@@ -134,20 +149,29 @@ def display_task(task_id, show_successful_transfers=True):
             print " %s -> %s" % (t[u'source_path'],
                                  t[u'destination_path'])
 
-def wait_for_task(task_id, timeout=120):
-    status = "ACTIVE"
-    while timeout and status == "ACTIVE":
+
+def wait_for_task(task_id, timeout=120, poll_interval=30):
+    """
+    Wait for a task to complete within @timeout seconds, polling
+    every @poll_interval seconds. If the task completed in the timeout,
+    return the status ("SUCCEEDED" or "FAILED"). If it did not complete,
+    returns None. Caller is responsible for cancelling incomplete task
+    as appropriate.
+    """
+    assert timeout % poll_interval == 0, \
+        "timeout must be multiple of poll_interval"
+    timeout_left = timeout
+    while timeout_left >= 0:
         code, reason, data = api.task(task_id, fields="status")
         status = data["status"]
-        time.sleep(1)
-        timeout -= 1
+        if status in ("SUCCEEDED", "FAILED"):
+            return status
+        if timeout_left > 0:
+            time.sleep(poll_interval)
+        timeout_left -= poll_interval
 
-    if status != "ACTIVE":
-        print "Task %s complete!" % task_id
-        return True
-    else:
-        print "Task still not complete after %d seconds" % timeout
-        return False
+    return None
+
 
 def display_endpoint_list():
     code, reason, endpoint_list = api.endpoint_list(limit=100)
@@ -156,9 +180,11 @@ def display_endpoint_list():
     for ep in endpoint_list["DATA"]:
         _print_endpoint(ep)
 
+
 def display_endpoint(endpoint_name):
     code, reason, data = api.endpoint(endpoint_name)
     _print_endpoint(data)
+
 
 def _print_endpoint(ep):
     name = ep["canonical_name"]
@@ -187,28 +213,23 @@ def _print_endpoint(ep):
         else:
             print
 
-def unicode_(data):
-    """
-    Coerce any type to unicode, assuming utf-8 encoding for strings.
-    """
-    if isinstance(data, unicode):
-        return data
-    if isinstance(data, str):
-        return unicode(data, "utf-8")
-    else:
-        return unicode(data)
 
 def display_ls(endpoint_name, path=""):
     code, reason, data = api.endpoint_ls(endpoint_name, path)
-    # Server returns canonical path; "" maps to the users default path,
-    # which is typically their home directory "/~/".
+    # The "path" field contains the canonical path from the GridFTP server. For
+    # aboslute paths this will be the same as the requested path, but in some
+    # cases it will be mapped. Also an empty path can be passed
+    # and will be mapped to the user's default directory (typically
+    # their home directory) by the Transfer API.
     path = data["path"]
     print "Contents of %s on %s:" % (path, endpoint_name)
     headers = "name, type, permissions, size, user, group, last_modified"
     headers_list = headers.split(", ")
     print headers
-    for f in data["DATA"]:
-        print ", ".join([unicode_(f[k]) for k in headers_list])
+    for file_or_dir in data["DATA"]:
+        print ", ".join([unicode(file_or_dir[field])
+                         for field in headers_list])
+
 
 if __name__ == '__main__':
     api, _ = create_client_from_args()
