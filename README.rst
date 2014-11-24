@@ -58,6 +58,12 @@ prompted for your password.
 Changelog
 =========
 
+0.10.17
+-------
+
+- Remove deprecated 'bearer' authentication method.
+- Remove deprecated method 'task_subtask_list'.
+
 0.10.16
 -------
 
