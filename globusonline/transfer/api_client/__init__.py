@@ -939,50 +939,8 @@ class InterfaceError(TransferAPIError):
 
 class APIError(TransferAPIError):
     """
-    Wrapper around an error returned by the transfer API. When constructing,
-    creates a error of the appropriate subclass based on the code field of
-    the error data.
+    Wrapper around an error returned by the transfer API.
     """
-
-    def __new__(cls, error_code, status_code, status_message, error_data):
-        """
-        Factory method for APIErrors, will return a subclass of APIError
-        according to the category in the error_code.
-        """
-        if status_code >= 200 and status_code < 400:
-            raise InterfaceError("status code %d is not an error"
-                                 % status_code)
-
-        # error_code not set means the request never made it all the way to the 
-        # go application.
-        if not error_code and status_code >= 400 and status_code < 500:
-            return super(APIError, ClientError).__new__(ClientError,
-                       error_code, status_code, status_message, error_data)
-
-        # The error_code is a dot delimited list of error specifiers,
-        # with the error category first, and more specific error details
-        # further to the right. If we are unable to get the error code
-        # or parse out the category, it's an error in the server
-        # response, so we default to ServerError.
-        category = "ServerError"
-        try:
-            category = error_code.split(".", 1)[0]
-        except:
-            error_code = "ServerError.ErrorCodeNotParsable"
-        if category == "ClientError":
-            return super(APIError, ClientError).__new__(ClientError,
-                        error_code, status_code, status_message, error_data)
-        elif category == "ExternalError":
-            return super(APIError, ExternalError).__new__(ExternalError,
-                        error_code, status_code, status_message, error_data)
-        elif category == "ServiceUnavailable":
-            return super(APIError, ServiceUnavailable).__new__(
-                        ServiceUnavailable,
-                        error_code, status_code, status_message, error_data)
-        else:  # category == "ServerError"
-            return super(APIError, ServerError).__new__(ServerError,
-                        error_code, status_code, status_message, error_data)
-
     def __init__(self, error_code, status_code, status_message, error_data):
         self.status_code = status_code
         self.status_message = status_message
@@ -994,10 +952,13 @@ class APIError(TransferAPIError):
 
     def read_error_data(self, error_code, error_data):
         if error_code:
+            # API error message
             self.resource = error_data["resource"]
             self._message = error_data["message"]
             self.request_id = error_data["request_id"]
         else:
+            # Possibly web server error message, assume plaintext
+            # response body
             self._message = error_data
 
     @property
@@ -1014,13 +975,17 @@ class APIError(TransferAPIError):
 
 class ClientError(APIError):
     """
-    Used for 4xx errors.
+    DEPRECATED, use APIError instead
+
+    Used for 400 errors.
     """
     pass
 
 
 class ServerError(APIError):
     """
+    DEPRECATED, use APIError instead
+
     Used for 500 error only. Indicates bug in the server.
     """
     pass
@@ -1028,6 +993,8 @@ class ServerError(APIError):
 
 class ExternalError(APIError):
     """
+    DEPRECATED, use APIError instead
+
     Used for 502 Bad Gateway and 504 Gateway Timeout.
     Inticates problem contacting external resources, like gridftp
     endpoints and myproxy servers.
@@ -1037,6 +1004,8 @@ class ExternalError(APIError):
 
 class ServiceUnavailable(APIError):
     """
+    DEPRECATED, use APIError instead
+
     Used for 503 Service Unavailable.
     """
     pass
@@ -1059,12 +1028,45 @@ def api_result(response, data):
     error_code = response.getheader("X-Transfer-API-Error", None)
 
     if error_code or (status_code >= 400 and status_code < 600):
-        raise APIError(error_code, status_code, status_message, data)
+        _raise_error(error_code, status_code, status_message, data)
     elif status_code >= 200 and status_code < 400:
         return (status_code, status_message, data)
     else:
         raise InterfaceError("Unexpected status code in response: %d"
                              % status_code)
+
+
+def _raise_error(error_code, status_code, status_message, error_data):
+    """
+    Raise an APIError based on the HTTP status code and API error code
+    and error data.
+
+    For backward compatibility, use APIError subclasses when possible. New
+    code should still except APIError and check the code, as the subclasses
+    are deprecated.
+    """
+    if status_code >= 200 and status_code < 400:
+        raise InterfaceError("status code %d is not an error"
+                             % status_code)
+
+    # error_code not set means the request never made it all the way to the
+    # go application, typically caused by a bad base_url.
+    if not error_code and status_code >= 400 and status_code < 500:
+        raise ClientError(error_code, status_code, status_message, error_data)
+
+    if status_code in (400, 403, 404, 405, 406, 409):
+        raise ClientError(error_code, status_code, status_message, error_data)
+    elif status_code in (502, 504):
+        raise ExternalError(error_code, status_code, status_message,
+                             error_data)
+    elif status_code == 503:
+        raise ServiceUnavailable(error_code, status_code, status_message,
+                                 error_data)
+    elif status_code == 500:
+        raise ServerError(error_code, status_code, status_message,
+                          error_data)
+
+    raise APIError(error_code, status_code, status_message, error_data)
 
 
 def encode_qs(kwargs=None, **kw):
