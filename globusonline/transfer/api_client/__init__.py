@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Library for using the globusonline Transfer API. Tested with python 2.6;
+Library for using the Globus Transfer API. Tested with python 2.6;
 will likely also work with 2.7, but not with earlier releases or 3.x.
 
 Can also be run with python -i or ipython and used as an interactive shell
@@ -86,13 +86,12 @@ class TransferAPIClient(object):
                  base_url=DEFAULT_BASE_URL,
                  timeout=socket._GLOBAL_DEFAULT_TIMEOUT,
                  httplib_debuglevel=0, max_attempts=1,
-                 header_auth=None, goauth=None):
+                 goauth=None):
         """
         Initialize a client with the client credential and optional alternate
         base URL.
 
-        For authentication, use either x509 or goauth; header_auth is
-        deprecated, and cookie auth is no longer supported.
+        For authentication, use either x509 or goauth.
 
         x509 requires configuring your Globus Online account with the x509
         certificate and having the private key available. Requires @cert_file
@@ -113,8 +112,6 @@ class TransferAPIClient(object):
         @param key_file: path to file containg the RSA key for client
                          authentication. If blank and cert_file passed,
                          uses cert_file.
-        @param header_auth: contents of the saml cookie, but used for header
-                            authentication, not cookie auth.
         @param goauth: goauth access token retrieved from nexus.
         @param base_url: optionally specify an alternate base url, if testing
                          out an unreleased or alternatively hosted version of
@@ -140,10 +137,7 @@ class TransferAPIClient(object):
 
         self.headers = {}
 
-        if header_auth:
-            if goauth or cert_file or key_file:
-                raise InterfaceError("pass only one auth method")
-        elif goauth:
+        if goauth:
             if cert_file or key_file:
                 raise InterfaceError("pass only one auth method")
         elif cert_file or key_file:
@@ -169,7 +163,6 @@ class TransferAPIClient(object):
         self.goauth = goauth
         self.cert_file = cert_file
         self.key_file = key_file
-        self.header_auth = header_auth
 
         self.username = username
         self.server_ca_file = server_ca_file
@@ -248,8 +241,6 @@ class TransferAPIClient(object):
 
         if self.goauth:
             headers["Authorization"] = "Globus-Goauthtoken %s" % self.goauth
-        elif self.header_auth:
-            headers["Authorization"] = "Bearer %s" % self.header_auth
 
         headers["User-Agent"] = self.user_agent
         headers["X-Transfer-API-Client"] = self.client_info
@@ -1118,9 +1109,6 @@ def process_args(args=None, parser=None):
     parser.add_option("-a", "--max-attempts", dest="max_attempts", type="int",
                       help="retry up to this many times on connection errors",
                       metavar="ATTEMPTS")
-    parser.add_option("-B", "--bearer", dest="header_auth",
-                      help="Use header-based authentication",
-                      metavar="BEARER", type="str")
     parser.add_option("-g", "--goauth", dest="goauth",
                       help="Use goauth authentication",
                       metavar="TOKEN", type="str")
@@ -1133,10 +1121,9 @@ def process_args(args=None, parser=None):
         parser.error("username arguments is required")
 
     auth_method_error = ("use only one authentication method:"
-                         + " -p, -k/-c, -B, or -g")
+                         + " -p, -k/-c, or -g")
     if options.password_prompt:
-        if (options.goauth or options.header_auth
-        or options.key_file or options.cert_file):
+        if options.goauth or options.key_file or options.cert_file:
             parser.error(auth_method_error)
         username = args[0]
         success = False
@@ -1156,9 +1143,6 @@ def process_args(args=None, parser=None):
         if not success:
             sys.stderr.write("too many failed attempts, exiting\n")
             sys.exit(2)
-    elif options.header_auth:
-        if options.key_file or options.cert_file or options.goauth:
-            parser.error(auth_method_error)
     elif options.goauth:
         if options.key_file or options.cert_file:
             parser.error(auth_method_error)
@@ -1189,7 +1173,6 @@ def create_client_from_args(args=None):
                             cert_file=options.cert_file,
                             key_file=options.key_file,
                             base_url=options.base_url,
-                            header_auth=options.header_auth,
                             goauth=options.goauth,
                             timeout=options.timeout,
                             max_attempts=options.max_attempts)

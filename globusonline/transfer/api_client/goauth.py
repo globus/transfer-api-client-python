@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Login to www.globusonline.org and extract the saml cookie.
+Libarary for fetching a goauth token from the Globus Nexus API, which can be
+used to authenticate to the Tranfser API.
 
 When run as a script, takes username as first and only argument, and prompts
-for password. The cookie is printed to stdout.
+for password. The token is printed to stdout.
 """
 
 import sys
