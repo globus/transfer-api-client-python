@@ -442,15 +442,6 @@ class TransferAPIClient(object):
         """
         return self.get("/task/%s/event_list" % parent_task_id + encode_qs(kw))
 
-    def subtask_event_list(self, task_id, **kw):
-        """
-        DEPRECATED, see task_successful_transfers
-
-        @return: (status_code, status_reason, data)
-        @raise TransferAPIError
-        """
-        return self.get("/subtask/%s/event_list" % task_id + encode_qs(kw))
-
     def endpoint_list(self, **kw):
         """
         @return: (status_code, status_reason, data)
