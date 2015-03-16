@@ -21,12 +21,19 @@ GT style hostcerts (host/ prefix in the DN).
 
 See http://www.muchtooscrawled.com/2010/03/https-certificate-verification-in-python-with-urllib2/
 """
+from __future__ import print_function
 import socket
 import ssl
 import os
 import re
-from httplib import HTTPSConnection
-from urlparse import urlsplit
+try:
+  from httplib import HTTPSConnection
+except:
+  from http.client import HTTPSConnection
+try:
+  from urlparse import urlsplit
+except:
+  from urllib.parse import urlsplit
 
 
 __all__ = ["VerifiedHTTPSConnection"]
@@ -199,10 +206,10 @@ def test_main():
             sys.exit("Timout!")
         else:
             raise
-    print r.status, r.reason
+    print(r.status, r.reason)
     for h in r.getheaders():
-        print "%s: %s" % h
-    print r.read(),
+        print("%s: %s" % h)
+    print(r.read(),)
 
 
 if __name__ == '__main__':

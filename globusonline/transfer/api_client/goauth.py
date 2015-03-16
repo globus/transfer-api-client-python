@@ -21,8 +21,12 @@ When run as a script, takes username as first and only argument, and prompts
 for password. The token is printed to stdout.
 """
 
+from __future__ import print_function
 import sys
-import urlparse
+try:
+  import urlparse
+except:
+  from urllib.parse import urlparse
 import getpass
 from collections import namedtuple
 import json
@@ -69,7 +73,7 @@ def get_access_token(username=None, password=None, ca_certs=None):
         from globusonline.transfer.api_client import get_ca
         ca_certs = get_ca(HOST)
     if username is None:
-        print "Globus Online Username: ",
+        print("Globus Online Username: ",)
         sys.stdout.flush()
         username = sys.stdin.readline().strip()
     if password is None:
@@ -138,7 +142,7 @@ if __name__ == '__main__':
     try:
         result = get_access_token(ca_certs=options.server_ca_file,
                                   username=username)
-        print result.token
+        print(result.token)
     except Exception as e:
         sys.stderr.write(str(e) + "\n")
         sys.exit(2)

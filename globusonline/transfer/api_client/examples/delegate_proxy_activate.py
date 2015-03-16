@@ -63,7 +63,7 @@ if __name__ == '__main__':
     ep = args[0]
     cred_file = args[1]
 
-    print "Using x509_proxy implementation '%s'" % x509_proxy.implementation
+    print("Using x509_proxy implementation '%s'" % x509_proxy.implementation)
 
     _, _, reqs = api.endpoint_activation_requirements(ep,
                                                       type="delegate_proxy")
@@ -72,4 +72,4 @@ if __name__ == '__main__':
     reqs.set_requirement_value("delegate_proxy", "proxy_chain", proxy)
 
     result = api.endpoint_activate(ep, reqs)
-    print result
+    print(result)
