@@ -79,7 +79,7 @@ def get_access_token(username=None, password=None, ca_certs=None):
     if password is None:
         password = getpass.getpass("Globus Online Password: ")
 
-    basic_auth = base64.b64encode("%s:%s" % (username, password))
+    basic_auth = base64.b64encode(("%s:%s" % (username, password)).encode('ascii')).decode("ascii")
     headers = { "Content-type": "application/json; charset=UTF-8",
                 "Hostname": HOST,
                 "Accept": "application/json; charset=UTF-8",
