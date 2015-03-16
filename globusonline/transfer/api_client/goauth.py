@@ -21,8 +21,12 @@ When run as a script, takes username as first and only argument, and prompts
 for password. The token is printed to stdout.
 """
 
+from __future__ import print_function
 import sys
-import urlparse
+try:
+  import urlparse
+except:
+  from urllib.parse import urlparse
 import getpass
 from collections import namedtuple
 import json
@@ -69,13 +73,13 @@ def get_access_token(username=None, password=None, ca_certs=None):
         from globusonline.transfer.api_client import get_ca
         ca_certs = get_ca(HOST)
     if username is None:
-        print "Globus Online Username: ",
+        print("Globus Online Username: ",)
         sys.stdout.flush()
         username = sys.stdin.readline().strip()
     if password is None:
         password = getpass.getpass("Globus Online Password: ")
 
-    basic_auth = base64.b64encode("%s:%s" % (username, password))
+    basic_auth = base64.b64encode(("%s:%s" % (username, password)).encode('ascii')).decode("ascii")
     headers = { "Content-type": "application/json; charset=UTF-8",
                 "Hostname": HOST,
                 "Accept": "application/json; charset=UTF-8",
@@ -88,7 +92,7 @@ def get_access_token(username=None, password=None, ca_certs=None):
     elif response.status > 299 or response.status < 200:
         raise GOAuthError("error response: %d %s"
                          % (response.status, response.reason))
-    data = json.loads(response.read())
+    data = json.loads(response.read().decode('ascii'))
     token = data.get("access_token")
     if token is None:
         raise GOAuthError("no token in response")
@@ -138,7 +142,7 @@ if __name__ == '__main__':
     try:
         result = get_access_token(ca_certs=options.server_ca_file,
                                   username=username)
-        print result.token
+        print(result.token)
     except Exception as e:
         sys.stderr.write(str(e) + "\n")
         sys.exit(2)

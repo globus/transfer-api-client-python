@@ -24,7 +24,7 @@ Usage:
 The endpoint name may contain a # which is a shell comment, so be sure to
 quote the endpoint name.
 """
-
+from __future__ import print_function
 import sys
 from getpass import getpass
 
@@ -47,8 +47,8 @@ def input_default(field_name, default, private=False):
             if default:
                 value = default
             else:
-                print "Error: %s is required, please enter a value" \
-                    % field_name
+                print("Error: %s is required, please enter a value" \
+                    % field_name)
     return value
 
 
@@ -79,8 +79,8 @@ if __name__ == '__main__':
 
     try:
         _, _, result = api.endpoint_activate(ep, reqs)
-        print "Activation successful"
-        print "Subject:", result["subject"]
-        print "Expires:", result["expire_time"]
+        print("Activation successful")
+        print("Subject:", result["subject"])
+        print("Expires:", result["expire_time"])
     except APIError as e:
-        print "Error: %s" % e.message
+        print("Error: %s" % e.message)

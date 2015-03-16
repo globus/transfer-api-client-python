@@ -20,6 +20,7 @@ Example run using standard globus toolkit certificate locations:
 
 python example.py USERNAME -k ~/.globus/userkey.pem -c ~/.globus/usercert.pem
 """
+from __future__ import print_function
 import time
 from datetime import datetime, timedelta
 
@@ -38,18 +39,18 @@ def tutorial():
     Uses module global API client instance.
     """
     # See what is in the account before we make any submissions.
-    print "=== Before tutorial ==="
-    display_tasksummary(); print
-    display_task_list(); print
-    display_endpoint_list(); print
+    print("=== Before tutorial ===")
+    display_tasksummary(); print("")
+    display_task_list(); print("")
+    display_endpoint_list(); print("")
 
     # auto activate the endpoint, and display before/after.
     display_activation("go#ep1")
     display_activation("go#ep2")
 
-    print "=== Before transfer ==="
-    display_ls("go#ep1"); print
-    display_ls("go#ep2"); print
+    print("=== Before transfer ===")
+    display_ls("go#ep1"); print("")
+    display_ls("go#ep2"); print("")
 
     # submit a transfer
     code, message, data = api.transfer_submission_id()
@@ -61,9 +62,9 @@ def tutorial():
     task_id = data["task_id"]
 
     # see the new transfer show up
-    print "=== After submit ==="
-    display_tasksummary(); print
-    display_task(task_id, False); print
+    print("=== After submit ===")
+    display_tasksummary(); print("")
+    display_task(task_id, False); print("")
 
     # wait for the task to complete, and see the tasks and
     # endpoint ls change
@@ -76,36 +77,36 @@ def tutorial():
         # endpoints is having problems or the user already has a bunch
         # of other active tasks (there is a limit to the
         # number of concurrent active tasks a user can have).
-        print "WARNING: task did not complete before timeout!"
+        print("WARNING: task did not complete before timeout!")
     else:
-        print "Task %s complete with status %s" % (task_id, status)
-        print "=== After completion ==="
-        display_tasksummary(); print
-        display_task(task_id); print
-        display_ls("go#ep2"); print
+        print("Task %s complete with status %s" % (task_id, status))
+        print("=== After completion ===")
+        display_tasksummary(); print("")
+        display_task(task_id); print("")
+        display_ls("go#ep2"); print("")
 
 
 def display_activation(endpoint_name):
-    print "=== Endpoint pre-activation ==="
+    print("=== Endpoint pre-activation ===")
     display_endpoint(endpoint_name)
-    print
+    print("")
     code, reason, result = api.endpoint_autoactivate(endpoint_name,
                                                      if_expires_in=600)
     if result["code"].startswith("AutoActivationFailed"):
-        print "Auto activation failed, ls and transfers will likely fail!"
-    print "result: %s (%s)" % (result["code"], result["message"])
-    print "=== Endpoint post-activation ==="
+        print("Auto activation failed, ls and transfers will likely fail!")
+    print("result: %s (%s)" % (result["code"], result["message"]))
+    print("=== Endpoint post-activation ===")
     display_endpoint(endpoint_name)
-    print
+    print("")
 
 
 def display_tasksummary():
     code, reason, data = api.tasksummary()
-    print "Task Summary for %s:" % api.username
+    print("Task Summary for %s:" % api.username)
     for k, v in data.iteritems():
         if k == "DATA_TYPE":
             continue
-        print "%3d %s" % (int(v), k.upper().ljust(9))
+        print("%3d %s" % (int(v), k.upper().ljust(9)))
 
 
 def display_task_list(max_age=None):
@@ -121,9 +122,9 @@ def display_task_list(max_age=None):
         kwargs["request_time"] = "%s," % min_request_time
 
     code, reason, task_list = api.task_list(**kwargs)
-    print "task_list for %s:" % api.username
+    print("task_list for %s:" % api.username)
     for task in task_list["DATA"]:
-        print "Task %s:" % task["task_id"]
+        print("Task %s:" % task["task_id"])
         _print_task(task)
 
 
@@ -133,21 +134,21 @@ def _print_task(data, indent_level=0):
     for k, v in data.iteritems():
         if k in ("DATA_TYPE", "LINKS"):
             continue
-        print indent + "%s: %s" % (k, v)
+        print(indent + "%s: %s" % (k, v))
 
 
 def display_task(task_id, show_successful_transfers=True):
     code, reason, data = api.task(task_id)
-    print "Task %s:" % task_id
+    print("Task %s:" % task_id)
     _print_task(data, 0)
 
     if show_successful_transfers:
         code, reason, data = api.task_successful_transfers(task_id)
         transfer_list = data["DATA"]
-        print "Successful Transfers (src -> dst)"
+        print("Successful Transfers (src -> dst)")
         for t in transfer_list:
-            print " %s -> %s" % (t[u'source_path'],
-                                 t[u'destination_path'])
+            print(" %s -> %s" % (t[u'source_path'],
+                                 t[u'destination_path']))
 
 
 def wait_for_task(task_id, timeout=120, poll_interval=30):
@@ -175,8 +176,8 @@ def wait_for_task(task_id, timeout=120, poll_interval=30):
 
 def display_endpoint_list():
     code, reason, endpoint_list = api.endpoint_list(limit=100)
-    print "Found %d endpoints for user %s:" \
-          % (endpoint_list["length"], api.username)
+    print("Found %d endpoints for user %s:" \
+          % (endpoint_list["length"], api.username))
     for ep in endpoint_list["DATA"]:
         _print_endpoint(ep)
 
@@ -188,30 +189,30 @@ def display_endpoint(endpoint_name):
 
 def _print_endpoint(ep):
     name = ep["canonical_name"]
-    print name
+    print(name)
     if ep["activated"]:
-        print "  activated (expires: %s)" % ep["expire_time"]
+        print("  activated (expires: %s)" % ep["expire_time"])
     else:
-        print "  not activated"
+        print("  not activated")
     if ep["public"]:
-        print "  public"
+        print("  public")
     else:
-        print "  not public"
+        print("  not public")
     if ep["myproxy_server"]:
-        print "  default myproxy server: %s" % ep["myproxy_server"]
+        print("  default myproxy server: %s" % ep["myproxy_server"])
     else:
-        print "  no default myproxy server"
+        print("  no default myproxy server")
     servers = ep.get("DATA", ())
-    print "  servers:"
+    print("  servers:")
     for s in servers:
         uri = s["uri"]
         if not uri:
             uri = "GC endpoint, no uri available"
-        print "    " + uri,
+        print("    " + uri,)
         if s["subject"]:
-            print " (%s)" % s["subject"]
+            print(" (%s)" % s["subject"])
         else:
-            print
+            print("")
 
 
 def display_ls(endpoint_name, path=""):
@@ -222,13 +223,13 @@ def display_ls(endpoint_name, path=""):
     # and will be mapped to the user's default directory (typically
     # their home directory) by the Transfer API.
     path = data["path"]
-    print "Contents of %s on %s:" % (path, endpoint_name)
+    print("Contents of %s on %s:" % (path, endpoint_name))
     headers = "name, type, permissions, size, user, group, last_modified"
     headers_list = headers.split(", ")
-    print headers
+    print(headers)
     for file_or_dir in data["DATA"]:
-        print ", ".join([unicode(file_or_dir[field])
-                         for field in headers_list])
+        print(", ".join([unicode(file_or_dir[field])
+                         for field in headers_list]))
 
 
 if __name__ == '__main__':

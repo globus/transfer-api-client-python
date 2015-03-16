@@ -33,6 +33,7 @@ passed on the command line, which you can use to make requests:
 
 See https://transfer.api.globusonline.org for API documentation.
 """
+from __future__ import print_function
 import os.path
 import os
 import sys
@@ -42,8 +43,14 @@ import json
 import urllib
 import time
 import ssl
-from urlparse import urlparse
-from httplib import BadStatusLine
+try:
+  from urlparse import urlparse
+except:
+  from urllib.parse import urlparse
+try:
+  from httplib import BadStatusLine
+except:
+  from http.client import BadStatusLine
 from datetime import datetime, timedelta
 
 from globusonline.transfer.api_client.verified_https \
@@ -230,14 +237,14 @@ class TransferAPIClient(object):
             headers["Content-Type"] = content_type
 
         if self.print_request:
-            print
-            print ">>>REQUEST>>>:"
-            print "%s %s" % (method, url)
+            print("")
+            print(">>>REQUEST>>>:")
+            print("%s %s" % (method, url))
             for h in headers.iteritems():
-                print "%s: %s" % h
-            print
+                print("%s: %s" % h)
+            print("")
             if body:
-                print body
+                print(body)
 
         if self.goauth:
             headers["Authorization"] = "Globus-Goauthtoken %s" % self.goauth
@@ -253,7 +260,7 @@ class TransferAPIClient(object):
             response_body = r.read()
             return r, response_body
 
-        for attempt in xrange(self.max_attempts):
+        for attempt in range(self.max_attempts):
             r = None
             try:
                 try:
@@ -298,13 +305,13 @@ class TransferAPIClient(object):
                 time.sleep(RETRY_WAIT_SECONDS)
 
         if self.print_response:
-            print
-            print "<<<RESPONSE<<<:"
-            print r.status, r.reason
+            print("")
+            print("<<<RESPONSE<<<:")
+            print(r.status, r.reason)
             for h in r.getheaders():
-                print "%s: %s" % h
-            print
-            print response_body
+                print("%s: %s" % h)
+            print("")
+            print(response_body)
 
         return r, response_body
 
@@ -875,7 +882,7 @@ class ActivationRequirementList(object):
         self.req_list = [req for req in self.req_list if req["type"] == type]
         # remap
         keys = [r["type"] + "." + r["name"] for r in self.req_list]
-        self.index_map = dict(zip(keys, xrange(len(keys))))
+        self.index_map = dict(zip(keys, range(len(keys))))
 
     def as_json(self):
         return json.dumps(self.json_data)
@@ -1118,7 +1125,7 @@ def process_args(args=None, parser=None):
             parser.error(auth_method_error)
         username = args[0]
         success = False
-        for i in xrange(5):
+        for i in range(5):
             try:
                 result = get_access_token(username=username)
                 args[0] = result.username

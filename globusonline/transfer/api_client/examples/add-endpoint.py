@@ -29,6 +29,7 @@ GC endpoint.
 
 For a full list of options, run with -h.
 """
+from __future__ import print_function
 import sys
 import inspect
 from optparse import OptionParser
@@ -81,9 +82,9 @@ def main():
     _, _, data = api.endpoint_create(args[1], **kw)
     setup_key = data.get("globus_connect_setup_key")
     if setup_key:
-        print "GC Setup Key: %s" % setup_key
-    print "Endpoint Name: %s" % data["canonical_name"]
-    print data["message"]
+        print("GC Setup Key: %s" % setup_key)
+    print("Endpoint Name: %s" % data["canonical_name"])
+    print(data["message"])
 
 
 if __name__ == '__main__':
