@@ -92,7 +92,7 @@ def get_access_token(username=None, password=None, ca_certs=None):
     elif response.status > 299 or response.status < 200:
         raise GOAuthError("error response: %d %s"
                          % (response.status, response.reason))
-    data = json.loads(response.read())
+    data = json.loads(response.read().decode('ascii'))
     token = data.get("access_token")
     if token is None:
         raise GOAuthError("no token in response")
