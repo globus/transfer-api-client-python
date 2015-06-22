@@ -22,9 +22,9 @@ It creates a TransferAPIClient instance called "api" with the credentials
 passed on the command line, which you can use to make requests.
 
  >>> print dir(api) # See a list of available methods.
- >>> code, reason, data = api.tasksummary() # Test out tasksummary.
+ >>> code, reason, data = api.endpoint_list() # Test out endpoint_list.
  >>> api.set_debug_print(True, True) # Print raw request/responses.
- >>> code, reason, data = api.tasksummary() # Run again with debugging enabled.
+ >>> code, reason, data = api.endpoint_list() # Run again with debugging enabled.
 
 """
 

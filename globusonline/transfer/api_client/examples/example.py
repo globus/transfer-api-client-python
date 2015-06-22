@@ -39,7 +39,6 @@ def tutorial():
     """
     # See what is in the account before we make any submissions.
     print "=== Before tutorial ==="
-    display_tasksummary(); print
     display_task_list(); print
     display_endpoint_list(); print
 
@@ -62,7 +61,6 @@ def tutorial():
 
     # see the new transfer show up
     print "=== After submit ==="
-    display_tasksummary(); print
     display_task(task_id, False); print
 
     # wait for the task to complete, and see the tasks and
@@ -80,7 +78,6 @@ def tutorial():
     else:
         print "Task %s complete with status %s" % (task_id, status)
         print "=== After completion ==="
-        display_tasksummary(); print
         display_task(task_id); print
         display_ls("go#ep2"); print
 
@@ -97,15 +94,6 @@ def display_activation(endpoint_name):
     print "=== Endpoint post-activation ==="
     display_endpoint(endpoint_name)
     print
-
-
-def display_tasksummary():
-    code, reason, data = api.tasksummary()
-    print "Task Summary for %s:" % api.username
-    for k, v in data.iteritems():
-        if k == "DATA_TYPE":
-            continue
-        print "%3d %s" % (int(v), k.upper().ljust(9))
 
 
 def display_task_list(max_age=None):

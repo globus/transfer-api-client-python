@@ -29,7 +29,7 @@ It creates an TransferAPIClient instance called "api" with the credentials
 passed on the command line, which you can use to make requests:
 
 > print dir(api) # See a list of available methods.
-> code, reason, data = api.tasksummary() # Test out tasksummary.
+> code, reason, data = api.endpoint_list() # Test out endpoint_list.
 
 See https://transfer.api.globusonline.org for API documentation.
 """
@@ -365,13 +365,6 @@ class TransferAPIClient(object):
         return self._request_json("DELETE", path)
 
     # Convenience API methods:
-    def tasksummary(self, **kw):
-        """
-        @return: (status_code, status_reason, data)
-        @raise TransferAPIError
-        """
-        return self.get("/tasksummary" + encode_qs(kw))
-
     def task_list(self, **kw):
         """
         @return: (status_code, status_reason, data)
@@ -415,25 +408,6 @@ class TransferAPIClient(object):
         """
         return self.get("/task/%s/successful_transfers" % task_id
                         + encode_qs(kw))
-
-    def subtask_list(self, parent_task_id, **kw):
-        """
-        DEPRECATED, see task_successful_transfers
-
-        @return: (status_code, status_reason, data)
-        @raise TransferAPIError
-        """
-        return self.get("/task/%s/subtask_list"
-                        % parent_task_id + encode_qs(kw))
-
-    def subtask(self, task_id, **kw):
-        """
-        DEPRECATED, see task_successful_transfers
-
-        @return: (status_code, status_reason, data)
-        @raise TransferAPIError
-        """
-        return self.get("/subtask/%s" % task_id + encode_qs(kw))
 
     def task_event_list(self, parent_task_id, **kw):
         """
