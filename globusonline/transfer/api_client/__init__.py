@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Library for using the Globus Transfer API. Tested with python 2.6;
-will likely also work with 2.7, but not with earlier releases or 3.x.
+Library for using the Globus Transfer API. Tested with python 2.6 and 2.7;
+3.x is not currently supported.
 
 Can also be run with python -i or ipython and used as an interactive shell
 for experimenting with the API:
@@ -46,8 +46,17 @@ from urlparse import urlparse
 from httplib import BadStatusLine
 from datetime import datetime, timedelta
 
-from globusonline.transfer.api_client.verified_https \
-    import VerifiedHTTPSConnection
+# Check if we have a version of python with PEP 0476 (2.7.9+), and
+# use standard lib if so. Otherwise use the hacked verified_https module
+# that adds verification using private APIs.
+if hasattr(ssl, "_create_unverified_context"):
+    STD_HTTPLIB = True
+    from httplib import HTTPSConnection
+else:
+    STD_HTTPLIB = False
+    from globusonline.transfer.api_client.verified_https \
+        import VerifiedHTTPSConnection as HTTPSConnection
+
 from globusonline.transfer.api_client.goauth import get_access_token
 
 API_VERSION = "v0.10"
@@ -61,7 +70,7 @@ __all__ = ["TransferAPIClient", "TransferAPIError", "InterfaceError",
            "ServiceUnavailable", "Transfer", "Delete"]
 
 # client version
-__version__ = "0.10.17"
+__version__ = "0.10.18"
 
 
 class TransferAPIClient(object):
@@ -185,18 +194,22 @@ class TransferAPIClient(object):
         Create an HTTPS connection to the server. Run automatically by
         request methods.
         """
-        kwargs = dict(ca_certs=self.server_ca_file, strict=False,
-                      timeout=self.timeout)
+        kwargs = dict(strict=False, timeout=self.timeout)
         if self.cert_file:
             kwargs["cert_file"] = self.cert_file
             kwargs["key_file"] = self.key_file
-        self.c = VerifiedHTTPSConnection(self.host, self.port, **kwargs)
+        self.c = HTTPSConnection(self.host, self.port, **kwargs)
+        if not STD_HTTPLIB:
+            # for verified_https, there is no default system trust
+            # store, so use our own ca file
+            self.c.ca_certs = self.server_ca_file
+        # else for standard lib, use default system trust certs
 
         self.c.set_debuglevel(self.httplib_debuglevel)
 
     def set_http_connection_debug(self, value):
         """
-        Turn debugging of the underlying VerifiedHTTPSConnection on or
+        Turn debugging of the underlying HTTPSConnection on or
         off. Note: this may print sensative information, like auth tokens,
         to standard out.
         """
@@ -214,7 +227,7 @@ class TransferAPIClient(object):
 
     def close(self):
         """
-        Close the wrapped VerifiedHTTPSConnection.
+        Close the wrapped HTTPSConnection.
         """
         if self.c:
             self.c.close()
