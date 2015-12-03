@@ -58,6 +58,14 @@ prompted for your password.
 Changelog
 =========
 
+0.10.18
+-------
+
+- Use standard python httplib if the python version has PEP 0476 (2.7.9+).
+  This should fix an issue with using an http proxy, since the custom
+  verified_https library uses private APIs that broke in later versions of
+  2.7.x.
+
 0.10.17
 -------
 
