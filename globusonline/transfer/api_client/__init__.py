@@ -184,10 +184,21 @@ class TransferAPIClient(object):
         self.print_request = False
         self.print_response = False
         self.c = None
+        self._ssl_context = None
 
         self.user_agent = "Python-httplib/%s (%s)" \
                           % (platform.python_version(), platform.system())
         self.client_info = "globusonline.transfer.api_client/%s" % __version__
+
+    @property
+    def ssl_context(self):
+        if self._ssl_context is None:
+            self._ssl_context = ssl.create_default_context(
+                                            cafile=self.server_ca_file)
+            if self.cert_file:
+                self._ssl_context.load_cert_chain(certfile=self.cert_file,
+                                                  keyfile=self.key_file)
+        return self._ssl_context
 
     def connect(self):
         """
@@ -195,7 +206,9 @@ class TransferAPIClient(object):
         request methods.
         """
         kwargs = dict(strict=False, timeout=self.timeout)
-        if self.cert_file:
+        if STD_HTTPLIB:
+            kwargs["context"] = self.ssl_context
+        elif self.cert_file:
             kwargs["cert_file"] = self.cert_file
             kwargs["key_file"] = self.key_file
         self.c = HTTPSConnection(self.host, self.port, **kwargs)
@@ -203,7 +216,7 @@ class TransferAPIClient(object):
             # for verified_https, there is no default system trust
             # store, so use our own ca file
             self.c.ca_certs = self.server_ca_file
-        # else for standard lib, use default system trust certs
+        # else for standard lib, this is configured via the ssl context
 
         self.c.set_debuglevel(self.httplib_debuglevel)
 
