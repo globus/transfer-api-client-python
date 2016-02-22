@@ -1,8 +1,9 @@
 from __future__ import print_function
 
-import requests
 import urllib
+import json
 
+import requests
 
 STACKS = {
     "prod": ("transfer.api.globusonline.org",
@@ -81,15 +82,18 @@ class TransferAPIError(Exception):
     def __init__(self, r):
         if r.headers["Content-Type"] == "application/json":
             data = r.json()
+            self.http_status = r.status_code
             self.code = data["code"]
             self.message = data["message"]
             self.request_id = data["request_id"]
         else:
+            self.http_status = r.status_code
             self.code = "BadRequest"
             self.message = "Requested URL is not an API resource"
             self.request_id = ""
         super(TransferAPIError, self).__init__(self.code, self.message,
-                                               self.request_id)
+                                               self.request_id,
+                                               self.http_status)
 
 
 def _main():
