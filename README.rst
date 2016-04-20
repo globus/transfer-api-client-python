@@ -1,8 +1,11 @@
-This package contains a client library for the Globus Online Transfer
-API.
+NOTE: This package is no longer being updated, use the
+`Globus SDK for Python <http://globus.github.io/globus-sdk-python/>`_
+instead.
+
+This package contains an client library for the Globus Transfer API.
 
 For detailed documentation of the Transfer API, see
-`https://transfer.api.globusonline.org <https://transfer.api.globusonline.org>`_
+`https://docs.globus.org/api/transfer/ <https://docs.globus.org/api/transfer/>`_
 
 Installation
 ============
